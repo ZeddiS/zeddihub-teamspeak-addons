@@ -1,0 +1,40 @@
+# Build outputs
+build/
+build_api*/
+debug_build/
+out/
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.obj
+*.so
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cbp
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.suo
+
+# Qt MOC artifacts
+moc_*.cpp
+*_automoc.cpp
+
+# TS3 SDK is downloaded separately — see README.md and per-plugin BUILD.md
+ts3sdk/include/
+
+# Build outputs
+dist/
+release/
+
+# Logs
+*.log
+aqtinstall.log

@@ -1,0 +1,28 @@
+# build outputs
+build/
+out/
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.so
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cbp
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+
+# Qt MOC
+moc_*.cpp
+*_automoc.cpp
+
+# TS3 SDK is downloaded separately (see ts3sdk/PLACE_SDK_HERE.md)
+ts3sdk/include/
