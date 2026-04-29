@@ -20,7 +20,7 @@ if(NOT EXISTS "${TS3_SDK_DIR}/include/plugin_definitions.h")
 endif()
 
 # Qt 5.15.2 for the custom dialog
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt5 5.12 REQUIRED COMPONENTS Core Widgets)
 
 add_library(movespam SHARED
     src/plugin.cpp

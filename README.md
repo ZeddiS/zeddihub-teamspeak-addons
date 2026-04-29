@@ -1,116 +1,116 @@
 # ZeddiHub TeamSpeak Addons
 
-Kolekce 4 TeamSpeak 3 pluginů — práská, sleduje, hrá si s hlasem. Všechno
-napsané v C++17 + Qt 5.15.2, postavené pro **API verze 23, 24, 25, 26**
-(klient TS3 ~3.5.0 až 3.6.x+).
+Kolekce TeamSpeak 3 pluginů od ZeddiHub. Každý plugin má **vlastní GitHub
+repo** s vlastními releases. Tento repo je **index / collection / build
+infrastructure**.
+
+🌐 [zeddihub.eu](https://zeddihub.eu) · 👤 [zeddis.xyz](https://zeddis.xyz) · © 2026 ZeddiHub.eu
 
 ## Pluginy
 
-| Plugin | Co dělá | Menu |
+| Plugin | Kategorie | Repo | Co dělá |
+|---|---|---|---|
+| **Poke Bot** | 😈 prank | [ts3-pokebot](https://github.com/ZeddiS/ts3-pokebot) | Preset/custom poke kampaně, Burst+Schedule, Qt dark theme, MAX SPAM hard-cap |
+| **Follow** | 🔧 utility | [ts3-follow](https://github.com/ZeddiS/ts3-follow) | Single-target auto-follow, auto-stop on errors |
+| **MoveSpam** | 😈 prank | [ts3-movespam](https://github.com/ZeddiS/ts3-movespam) | Alternuje target mezi 2 channels — Basic + Custom Qt dialog |
+| **Voice Changer** | 🎭 fun | [ts3-voicechanger](https://github.com/ZeddiS/ts3-voicechanger) | Real-time DSP: Helium / Demon / Robot / Echo / Custom pitch |
+| **AutoReconnect** | 🔧 utility | [ts3-autoreconnect](https://github.com/ZeddiS/ts3-autoreconnect) | Auto-reconnect po disconnectu s exponential backoff |
+| **Greeting Bot** | 😈 prank | [ts3-greetingbot](https://github.com/ZeddiS/ts3-greetingbot) | Auto-poke každého kdo vstoupí do tvého kanálu |
+
+## Rychlá instalace
+
+Každý plugin má **vlastní release** na svém repu. Zhruba:
+
+1. Jdi na repo pluginu (viz tabulka)
+2. **Releases** → najdi nejnovější verzi
+3. Stáhni zip podle své TS3 verze:
+   - `*-TS3-3.5.0-api23.zip` — TS3 3.5.0
+   - `*-TS3-3.5.1-3.5.5-api24.zip` — TS3 3.5.1 až 3.5.5
+   - `*-TS3-3.5.6-api25.zip` — TS3 3.5.6 ⭐ nejčastější
+   - `*-TS3-3.6+-api26.zip` — TS3 3.6.0 a novější
+4. Rozbal zip → zkopíruj DLL do `%APPDATA%\TS3Client\plugins\`
+5. V TS3 → Settings → Plugins → Reload All → zaškrtni Enabled
+
+## Build infrastructure
+
+Tento repo obsahuje:
+
+- `build_all.ps1` — buildí všech 6 pluginů × 4 API verze = **24 DLLs** najednou
+- `package_zips.ps1` — balí `dist/*.dll` do `release/*.zip` s human-readable názvy
+- `split_repos.ps1` — splitne každý plugin do vlastního GH repa s release
+- `common/zh_brand.h` — sdílený author/copyright header
+- `ts3sdk/` — TeamSpeak Plugin SDK (gitignored, stáhneš sám)
+- `PLUGIN_IDEAS.md` — backlog dalších pluginů
+- per-plugin folders pro local development
+
+### Závislosti
+
+| Tool | Verze | Účel |
 |---|---|---|
-| **[Poke Bot](pokebot/)** | Pravým na uživatele → preset/custom poke kampaně. Burst i Schedule mode, MAX SPAM hard-cap 500, custom Qt dialog s TS3 dark theme. | Right-click client |
-| **[Follow](Follow/)** | Pravým na uživatele → Start Following → automaticky tě přesune do jeho kanálu když ho změní. Auto-stop při no-perms. | Right-click client |
-| **[MoveSpam](MoveSpam/)** | Pravým na uživatele → Basic (current↔default) nebo Custom dialog (zadat channel name/ID + interval slider). | Right-click client |
-| **[Voice Changer](VoiceChanger/)** | Plugins top menu → Settings dialog. DSP efekty na mikrofon: Helium, Demon, Robot, Echo, Custom pitch slider. Phase-vocoder pitch shift. | Plugins top menu |
+| Visual Studio 2022 BuildTools | C++ Desktop workload | Compiler + Windows SDK |
+| CMake | 3.16+ | Bundled ve VS BuildTools |
+| **Qt 5.12.12 MSVC 2017 64-bit** | LTS | TS3 ABI compat (TS3 3.5.6 má Qt 5.12.3) |
+| TS3 Plugin SDK | 3.3.0+ | https://github.com/TeamSpeak-Systems/ts3client-pluginsdk |
 
-## Stažení
+> **Důležité:** Qt 5.12.12 (ne 5.15.x). Plugin built proti 5.15+ může selhat
+> při loadu do TS3 3.5.6 kvůli chybějícím symbolům (např. `QPushButton::hitButton`
+> přibyl až v Qt 5.13). 5.12 LTS je forward-compatible s novějšími TS3 verzemi.
 
-Jdi na **[Releases](../../releases)** a stáhni .zip podle své TS3 verze:
-
-| TS3 client | Plugin API | Stáhni zip |
-|---|---|---|
-| 3.5.0 | 23 | `*_api23.zip` |
-| 3.5.1 - 3.5.5 | 24 | `*_api24.zip` |
-| **3.5.6** | 25 | `*_api25.zip` |
-| 3.6.x+ | 26 | `*_api26.zip` |
-
-Každý zip obsahuje DLL soubor pro daný plugin a danou API verzi. Rozbal a
-zkopíruj DLL do:
-
-```
-%APPDATA%\TS3Client\plugins\
-```
-
-(typicky `C:\Users\<USER>\AppData\Roaming\TS3Client\plugins\`)
-
-Pak v TS3: **Settings → Plugins → Reload All → zaškrtni Enabled**.
-
-## Instalační poznámky
-
-- Stahuj **jen jednu API verzi** každého pluginu — TS3 by jinak načetl
-  duplicity a viděl bys menu items dvakrát.
-- Pokud TS3 hlásí "API not compatible: X, current Y", máš špatnou variantu —
-  stáhni `*_apiY.zip`.
-- Voice Changer aplikuje efekty na **odchozí** mikrofon (slyší tě jiní
-  s hlasem). Nehraje to lokálně tobě.
-
-## Build ze zdrojáků
-
-Viz per-plugin BUILD.md, nebo top-level `build_all.ps1` pro batch:
+### Setup (jednorázově)
 
 ```powershell
-# Setup (jednorázově)
+# Qt 5.12.12 přes aqtinstall
+py -m pip install aqtinstall
+py -m aqt install-qt windows desktop 5.12.12 win64_msvc2017_64 -O C:\Qt --archives qtbase
+
+# TS3 plugin SDK
 git clone https://github.com/TeamSpeak-Systems/ts3client-pluginsdk.git ts3sdk_clone
 Move-Item ts3sdk_clone/include ts3sdk/include
 Remove-Item -Recurse -Force ts3sdk_clone
 
-# Qt 5.15.2
-py -m pip install aqtinstall
-py -m aqt install-qt windows desktop 5.15.2 win64_msvc2019_64 -O C:\Qt --archives qtbase
-
-# Build all
+# Build vše
 .\build_all.ps1
+.\package_zips.ps1
 ```
 
-Po dokončení v `dist/<plugin>/api<NN>/` najdeš všechny DLL.
+## Architektura — jak to funguje
 
-### Závislosti
+Každý plugin je samostatná Windows DLL:
+- TS3 SDK exporty (`ts3plugin_*` C functions)
+- Qt 5 dialogy pro UI (kde je potřeba)
+- Worker threads pro background DSP/scheduling/poke
+- PLUGIN_MENU_TYPE_CLIENT (right-click) i PLUGIN_MENU_TYPE_GLOBAL (top bar)
 
-| | |
-|---|---|
-| Visual Studio 2022 Build Tools | C++ Desktop workload + MSVC v143 + Windows SDK |
-| CMake 3.16+ | Bundled ve VS BuildTools |
-| Qt 5.15.2 MSVC 2019 64-bit | Pro UI dialogy (PokeBot, MoveSpam, VoiceChanger) |
-| TS3 Plugin SDK | https://github.com/TeamSpeak-Systems/ts3client-pluginsdk |
+DLL se buildí v 4 variantách per plugin (API 23/24/25/26), takže každý
+TS3 client od 3.5.0 po 3.6+ je pokryt.
 
-## Struktura repa
+Per-plugin `CLAUDE.md` (kontextová paměť pro Claude Code) má detaily
+o každé architecture.
 
-```
-zeddihub-teamspeak-addons/
-├── README.md                    ← tento soubor
-├── build_all.ps1                ← batch build script (16 DLLs)
-├── ts3sdk/                      ← TS3 plugin SDK (gitignored, stáhneš sám)
-├── pokebot/
-│   ├── CLAUDE.md                ← per-plugin context paměť
-│   ├── CMakeLists.txt
-│   ├── README.md / BUILD.md
-│   └── src/
-├── Follow/
-├── MoveSpam/
-├── VoiceChanger/
-│   └── vendor/smb_pitch_shift.h ← phase-vocoder pitch shifter (PD)
-└── dist/                        ← gitignored, výstup build_all.ps1
-    ├── pokebot/api23/*.dll
-    ├── pokebot/api24/*.dll
-    ├── ...
-    └── VoiceChanger/api26/*.dll
-```
+## Plugin ideas backlog
 
-## Etická poznámka
-
-PokeBot, MoveSpam — jsou to **harassment tools**. Používej **jen na
-serverech kde máš oprávnění** a **se souhlasem** uživatelů. Tyhle pluginy
-ti udělají kick/ban na 99% veřejných serverů.
-
-Follow + Voice Changer jsou OK i pro běžné použití (následování kamaráda,
-fun voice changer). Pořád ale platí, že je to tvoje zodpovědnost.
-
-## License
-
-Source code: MIT. Vendored knihovny mají vlastní licence:
-- `VoiceChanger/vendor/smb_pitch_shift.h` — public domain (Stephan M. Bernsee)
+Viz [PLUGIN_IDEAS.md](PLUGIN_IDEAS.md) — náměty na další užitečné a prank
+pluginy. PRs welcome!
 
 ## Verze
 
-- **v1.0.0** (2026-04-30) — Initial release: PokeBot, Follow, MoveSpam, Voice Changer.
-  Multi-API build (23/24/25/26).
+- **v1.1.0** (2026-04-30) — 6 pluginů, multi-API (23-26), Qt 5.12.12 ABI fix,
+  per-plugin GH repos, author/copyright info, global menu items
+- **v1.0.0** (2026-04-29) — Initial: 4 pluginů (PokeBot/Follow/MoveSpam/VoiceChanger)
+
+## License
+
+MIT pro vlastní kód. Vendored knihovny mají vlastní licence:
+- `VoiceChanger/vendor/smb_pitch_shift.h` — public domain (Stephan M. Bernsee)
+
+## Etická poznámka
+
+PokeBot, MoveSpam, GreetingBot — **harassment tools**. Používej **jen kde
+máš oprávnění** a **se souhlasem** uživatelů. Na 99% public TS3 serverů ti
+za ně budou kickovat / banovat. Tvoje zodpovědnost.
+
+Follow, AutoReconnect, Voice Changer — užitečné pro běžné použití.
+
+---
+
+zeddis.xyz · © 2026 ZeddiHub.eu · Built with Claude Code

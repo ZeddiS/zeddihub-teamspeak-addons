@@ -1,19 +1,20 @@
-# Build all 4 plugins x 4 API versions = 16 DLLs.
-# Outputs go to dist/<plugin>/api<NN>/ for easy zipping.
+# Build all 6 plugins x 4 API versions = 24 DLLs.
+# Built against Qt 5.12.12 (matches TS3 3.5.6 ABI; forward-compat with 5.15+).
 
 $ErrorActionPreference = "Stop"
 
 $cmake     = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-$qtPrefix  = "C:\Qt\5.15.2\msvc2019_64"
+$qtPrefix  = "C:\Qt\5.12.12\msvc2017_64"
 $root      = $PSScriptRoot
 if (-not $root) { $root = "C:\Users\12voj\Documents\zeddihub-teamspeak-addons" }
 
-# Plugin → CMake API var name → output base name
 $plugins = @(
-    @{ dir = "pokebot";       var = "POKEBOT_API_VERSION";  base = "zeddihub_pokebot" }
-    @{ dir = "Follow";        var = "FOLLOW_API_VERSION";   base = "follow"           }
-    @{ dir = "MoveSpam";      var = "MOVESPAM_API_VERSION"; base = "movespam"         }
-    @{ dir = "VoiceChanger";  var = "VC_API_VERSION";       base = "voicechanger"     }
+    @{ dir = "pokebot";       var = "POKEBOT_API_VERSION";       base = "zeddihub_pokebot" }
+    @{ dir = "Follow";        var = "FOLLOW_API_VERSION";        base = "follow"           }
+    @{ dir = "MoveSpam";      var = "MOVESPAM_API_VERSION";      base = "movespam"         }
+    @{ dir = "VoiceChanger";  var = "VC_API_VERSION";            base = "voicechanger"     }
+    @{ dir = "AutoReconnect"; var = "AUTORECONNECT_API_VERSION"; base = "autoreconnect"    }
+    @{ dir = "GreetingBot";   var = "GREETINGBOT_API_VERSION";   base = "greetingbot"      }
 )
 $apis = @(23, 24, 25, 26)
 
@@ -30,7 +31,6 @@ foreach ($p in $plugins) {
         $tag = "$($p.dir) api$api"
         Write-Host "`n=== Building $tag ===" -ForegroundColor Cyan
 
-        # Clean previous build dir (avoid stale CMake cache with old API var)
         if (Test-Path $buildDir) { Remove-Item -Recurse -Force $buildDir }
 
         & $cmake -S $pluginDir -B $buildDir -G "Visual Studio 17 2022" -A x64 `
@@ -66,7 +66,6 @@ foreach ($p in $plugins) {
     }
 }
 
-# Summary
 Write-Host "`n=== Summary ===" -ForegroundColor Yellow
 $ok = 0; $fail = 0
 foreach ($r in $results) {

@@ -19,6 +19,7 @@
 #include "plugin_definitions.h"
 #include "ts3_functions.h"
 
+#include "../../common/zh_brand.h"
 #include "custom_dialog.h"
 #include "move_engine.h"
 
@@ -46,6 +47,9 @@ enum MenuID : int {
     MENU_ID_BASIC = 1,
     MENU_ID_CUSTOM,
     MENU_ID_STOP,
+    MENU_ID_GLOBAL_STOP,
+    MENU_ID_GLOBAL_STATUS,
+    MENU_ID_GLOBAL_ABOUT,
 };
 
 void notifyTab(uint64 schid, const std::string& text) {
@@ -152,13 +156,14 @@ int ts3plugin_apiVersion() { return PLUGIN_API_VERSION; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_author() { return "MoveSpam"; }
+const char* ts3plugin_author() { return ZH_AUTHOR; }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
-    return "MoveSpam — repeatedly move target between two channels.";
+    return ZH_DESC(
+        "MoveSpam - repeatedly move target between two channels.");
 }
 
 #ifdef _WIN32
@@ -242,14 +247,20 @@ __declspec(dllexport)
 #endif
 void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
     *menuItems = static_cast<PluginMenuItem**>(
-        std::malloc(sizeof(PluginMenuItem*) * 4));
+        std::malloc(sizeof(PluginMenuItem*) * 7));
     (*menuItems)[0] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_BASIC,
                                    "MoveSpam: Basic (current ↔ default)");
     (*menuItems)[1] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_CUSTOM,
                                    "MoveSpam: Custom...");
     (*menuItems)[2] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_STOP,
                                    "MoveSpam: STOP");
-    (*menuItems)[3] = nullptr;
+    (*menuItems)[3] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_STOP,
+                                   "MoveSpam: STOP campaign");
+    (*menuItems)[4] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_STATUS,
+                                   "MoveSpam: Status");
+    (*menuItems)[5] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_ABOUT,
+                                   "MoveSpam: About...");
+    (*menuItems)[6] = nullptr;
 
     *menuIcon = static_cast<char*>(std::malloc(PLUGIN_MENU_BUFSZ));
     _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "");
@@ -262,8 +273,36 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                                enum PluginMenuType type,
                                int menuItemID,
                                uint64 selectedItemID) {
-    if (type != PLUGIN_MENU_TYPE_CLIENT) return;
     if (!g_engine) return;
+
+    if (type == PLUGIN_MENU_TYPE_GLOBAL) {
+        if (schid == 0 && ts3Functions.getCurrentServerConnectionHandlerID) {
+            schid = ts3Functions.getCurrentServerConnectionHandlerID();
+        }
+        switch (menuItemID) {
+            case MENU_ID_GLOBAL_STOP:
+                g_engine->stop();
+                notifyTab(schid, "[MoveSpam] Zastaveno.");
+                return;
+            case MENU_ID_GLOBAL_STATUS: {
+                char buf[160];
+                std::snprintf(buf, sizeof(buf),
+                              "[MoveSpam] %s — %d move odeslano.",
+                              g_engine->isRunning() ? "běží" : "idle",
+                              g_engine->sent());
+                notifyTab(schid, buf);
+                return;
+            }
+            case MENU_ID_GLOBAL_ABOUT:
+                notifyTab(schid,
+                    "[MoveSpam] " ZH_AUTHOR " — " ZH_COPYRIGHT
+                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                return;
+        }
+        return;
+    }
+
+    if (type != PLUGIN_MENU_TYPE_CLIENT) return;
     const anyID clientID = static_cast<anyID>(selectedItemID);
 
     switch (menuItemID) {

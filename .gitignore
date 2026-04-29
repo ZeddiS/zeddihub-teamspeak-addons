@@ -29,7 +29,7 @@ moc_*.cpp
 *_automoc.cpp
 
 # TS3 SDK is downloaded separately — see README.md and per-plugin BUILD.md
-ts3sdk/include/
+ts3sdk/
 
 # Build outputs
 dist/
@@ -38,3 +38,4 @@ release/
 # Logs
 *.log
 aqtinstall.log
+.claude/

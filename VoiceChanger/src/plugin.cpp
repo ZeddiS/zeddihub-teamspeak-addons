@@ -22,6 +22,7 @@
 #include "plugin_definitions.h"
 #include "ts3_functions.h"
 
+#include "../../common/zh_brand.h"
 #include "settings_dialog.h"
 #include "voice_engine.h"
 
@@ -99,14 +100,15 @@ int ts3plugin_apiVersion() { return PLUGIN_API_VERSION; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_author() { return "Voice Changer"; }
+const char* ts3plugin_author() { return ZH_AUTHOR; }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
-    return "Voice Changer — DSP efekty pro mikrofon (Helium, Demon, "
-           "Robot, Echo, Custom pitch). Plugins menu → Voice Changer.";
+    return ZH_DESC(
+        "Voice Changer - DSP efekty pro mikrofon (Helium, Demon, "
+        "Robot, Echo, Custom pitch). Plugins menu -> Voice Changer.");
 }
 
 #ifdef _WIN32

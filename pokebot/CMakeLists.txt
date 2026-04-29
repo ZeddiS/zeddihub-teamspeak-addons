@@ -59,7 +59,7 @@ target_compile_definitions(zeddihub_pokebot PRIVATE
     PLUGIN_API_VERSION=${POKEBOT_API_VERSION}
 )
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt5 5.12 REQUIRED COMPONENTS Core Widgets)
 target_link_libraries(zeddihub_pokebot PRIVATE Qt5::Core Qt5::Widgets)
 
 # -----------------------------------------------------------------------------

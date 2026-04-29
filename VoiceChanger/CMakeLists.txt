@@ -18,7 +18,7 @@ if(NOT EXISTS "${TS3_SDK_DIR}/include/plugin_definitions.h")
     message(FATAL_ERROR "TS3 plugin SDK headers not found at ${TS3_SDK_DIR}/include/plugin_definitions.h")
 endif()
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt5 5.12 REQUIRED COMPONENTS Core Widgets)
 
 add_library(voicechanger SHARED
     src/plugin.cpp

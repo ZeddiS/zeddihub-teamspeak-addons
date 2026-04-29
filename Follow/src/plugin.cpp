@@ -21,6 +21,8 @@
 #include "plugin_definitions.h"
 #include "ts3_functions.h"
 
+#include "../../common/zh_brand.h"
+
 #ifndef PLUGIN_API_VERSION
 #define PLUGIN_API_VERSION 26
 #endif
@@ -48,6 +50,9 @@ std::atomic<anyID>    g_followClientID{0};
 enum MenuID : int {
     MENU_ID_START = 1,
     MENU_ID_STOP,
+    MENU_ID_GLOBAL_STOP,
+    MENU_ID_GLOBAL_STATUS,
+    MENU_ID_GLOBAL_ABOUT,
 };
 
 void notifyTab(uint64 schid, const std::string& text) {
@@ -71,14 +76,26 @@ PluginMenuItem* makeMenuItem(PluginMenuType type, int id, const char* text) {
     return m;
 }
 
-// Move our own client into the same channel as target -------------------
+// Move our own client into the same channel as target. Treat "already in
+// channel" as success — we're tracking the user, not failing if we happen
+// to already be where we need to be.
 bool moveSelfTo(uint64 schid, uint64 channelID) {
     anyID myID = 0;
     if (ts3Functions.getClientID(schid, &myID) != ERROR_ok) return false;
     if (myID == 0) return false;
+
+    // Skip move if we're already in target channel (avoid noisy server roundtrip)
+    uint64 myCh = 0;
+    if (ts3Functions.getChannelOfClient(schid, myID, &myCh) == ERROR_ok &&
+        myCh == channelID) {
+        return true;
+    }
+
     unsigned int err = ts3Functions.requestClientMove(
         schid, myID, channelID, "", nullptr);
-    return err == ERROR_ok;
+    // ERROR_channel_already_in (0x0302) — we and target are now in same
+    // channel; benign for follow purposes.
+    return err == ERROR_ok || err == ERROR_channel_already_in;
 }
 
 void getClientName(uint64 schid, anyID clientID, std::string& out) {
@@ -126,13 +143,14 @@ int ts3plugin_apiVersion() { return PLUGIN_API_VERSION; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_author() { return "Follow"; }
+const char* ts3plugin_author() { return ZH_AUTHOR; }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
-    return "Follow another client into channels — right-click → Start Following.";
+    return ZH_DESC(
+        "Follow another client into channels - right-click -> Start Following.");
 }
 
 #ifdef _WIN32
@@ -217,12 +235,18 @@ __declspec(dllexport)
 #endif
 void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
     *menuItems = static_cast<PluginMenuItem**>(
-        std::malloc(sizeof(PluginMenuItem*) * 3));
+        std::malloc(sizeof(PluginMenuItem*) * 6));
     (*menuItems)[0] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_START,
                                    "Follow Bot: Start Following");
     (*menuItems)[1] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_STOP,
                                    "Follow Bot: Stop Following");
-    (*menuItems)[2] = nullptr;
+    (*menuItems)[2] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_STOP,
+                                   "Follow Bot: Stop Following");
+    (*menuItems)[3] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_STATUS,
+                                   "Follow Bot: Status");
+    (*menuItems)[4] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_ABOUT,
+                                   "Follow Bot: About...");
+    (*menuItems)[5] = nullptr;
 
     *menuIcon = static_cast<char*>(std::malloc(PLUGIN_MENU_BUFSZ));
     _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "");
@@ -235,6 +259,38 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                                enum PluginMenuType type,
                                int menuItemID,
                                uint64 selectedItemID) {
+    if (type == PLUGIN_MENU_TYPE_GLOBAL) {
+        if (schid == 0 && ts3Functions.getCurrentServerConnectionHandlerID) {
+            schid = ts3Functions.getCurrentServerConnectionHandlerID();
+        }
+        switch (menuItemID) {
+            case MENU_ID_GLOBAL_STOP:
+                stopFollowing(schid, "manual stop");
+                return;
+            case MENU_ID_GLOBAL_STATUS: {
+                if (g_active.load()) {
+                    anyID t = g_followClientID.load();
+                    std::string name;
+                    getClientName(g_followSchid.load(), t, name);
+                    char buf[256];
+                    std::snprintf(buf, sizeof(buf),
+                                  "[Follow] Aktivní — sleduji '%s' (id=%u).",
+                                  name.c_str(), t);
+                    notifyTab(schid, buf);
+                } else {
+                    notifyTab(schid, "[Follow] Idle — zatím nic nesleduji.");
+                }
+                return;
+            }
+            case MENU_ID_GLOBAL_ABOUT:
+                notifyTab(schid,
+                    "[Follow] " ZH_AUTHOR " — " ZH_COPYRIGHT
+                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                return;
+        }
+        return;
+    }
+
     if (type != PLUGIN_MENU_TYPE_CLIENT) return;
     const anyID clientID = static_cast<anyID>(selectedItemID);
 
@@ -327,13 +383,16 @@ void ts3plugin_onServerErrorEvent(uint64 schid,
     (void)extraMessage;
     if (!g_active.load()) return;
     if (error != ERROR_ok) {
-        // Only auto-stop on clear move/permission failures.
+        // Only auto-stop on clear move/permission failures. Specifically
+        // IGNORE ERROR_channel_already_in (0x0302) — we're tracking, not
+        // failing on a benign "you're already there" notice.
         if (error == ERROR_channel_invalid_password ||
             error == ERROR_channel_invalid_id ||
             error == ERROR_permissions ||
             error == ERROR_permissions_client_insufficient) {
-            stopFollowing(schid, "server odmítl move");
+            stopFollowing(schid, "server odmítl move (no permission)");
         }
+        // Other errors: log but keep following.
     }
 }
 

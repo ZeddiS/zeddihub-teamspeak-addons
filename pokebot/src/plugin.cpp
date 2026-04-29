@@ -18,6 +18,7 @@
 #include "plugin_definitions.h"
 #include "ts3_functions.h"
 
+#include "../../common/zh_brand.h"
 #include "custom_dialog.h"
 #include "poke_engine.h"
 #include "presets.h"
@@ -54,6 +55,9 @@ enum MenuID : int {
     MENU_ID_MAX_SPAM,
     MENU_ID_CUSTOM,
     MENU_ID_STOP,
+    MENU_ID_GLOBAL_STOP,
+    MENU_ID_GLOBAL_STATUS,
+    MENU_ID_GLOBAL_ABOUT,
 };
 
 struct MenuSpec {
@@ -121,15 +125,16 @@ int ts3plugin_apiVersion() {
 __declspec(dllexport)
 #endif
 const char* ts3plugin_author() {
-    return "Poke Bot";
+    return ZH_AUTHOR;
 }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
-    return "Poke Bot — pravym klikem na uzivatele vyber preset poke kampan "
-           "nebo otevri custom dialog (burst / schedule mode).";
+    return ZH_DESC(
+        "Poke Bot - pravym klikem na uzivatele vyber preset poke kampan "
+        "nebo otevri custom dialog (burst / schedule mode).");
 }
 
 #ifdef _WIN32
@@ -225,15 +230,27 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
 __declspec(dllexport)
 #endif
 void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
-    constexpr int kCount = sizeof(kMenuSpecs) / sizeof(kMenuSpecs[0]);
+    constexpr int kClientCount = sizeof(kMenuSpecs) / sizeof(kMenuSpecs[0]);
+    constexpr int kGlobalCount = 3;
+    constexpr int kTotal = kClientCount + kGlobalCount;
     *menuItems = static_cast<PluginMenuItem**>(
-        std::malloc(sizeof(PluginMenuItem*) * (kCount + 1)));
-    for (int i = 0; i < kCount; ++i) {
-        (*menuItems)[i] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT,
-                                       kMenuSpecs[i].id,
-                                       kMenuSpecs[i].text);
+        std::malloc(sizeof(PluginMenuItem*) * (kTotal + 1)));
+    int idx = 0;
+    for (int i = 0; i < kClientCount; ++i) {
+        (*menuItems)[idx++] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT,
+                                           kMenuSpecs[i].id,
+                                           kMenuSpecs[i].text);
     }
-    (*menuItems)[kCount] = nullptr;
+    (*menuItems)[idx++] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL,
+                                       MENU_ID_GLOBAL_STOP,
+                                       "Poke Bot: STOP campaign");
+    (*menuItems)[idx++] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL,
+                                       MENU_ID_GLOBAL_STATUS,
+                                       "Poke Bot: Status");
+    (*menuItems)[idx++] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL,
+                                       MENU_ID_GLOBAL_ABOUT,
+                                       "Poke Bot: About...");
+    (*menuItems)[idx] = nullptr;
 
     *menuIcon = static_cast<char*>(std::malloc(PLUGIN_MENU_BUFSZ));
     _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "");
@@ -246,9 +263,37 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                                enum PluginMenuType type,
                                int menuItemID,
                                uint64 selectedItemID) {
-    if (type != PLUGIN_MENU_TYPE_CLIENT) return;
     if (!g_engine) return;
 
+    // Global menu (Plugins top bar) ----------------------------------
+    if (type == PLUGIN_MENU_TYPE_GLOBAL) {
+        if (schid == 0 && ts3Functions.getCurrentServerConnectionHandlerID) {
+            schid = ts3Functions.getCurrentServerConnectionHandlerID();
+        }
+        switch (menuItemID) {
+            case MENU_ID_GLOBAL_STOP:
+                g_engine->stop();
+                notifyTab(schid, "[Poke Bot] Kampaň zastavena.");
+                return;
+            case MENU_ID_GLOBAL_STATUS: {
+                char buf[160];
+                std::snprintf(buf, sizeof(buf),
+                              "[Poke Bot] %s — %d / %d poke odeslano.",
+                              g_engine->isRunning() ? "běží" : "idle",
+                              g_engine->sent(), g_engine->total());
+                notifyTab(schid, buf);
+                return;
+            }
+            case MENU_ID_GLOBAL_ABOUT:
+                notifyTab(schid,
+                    "[Poke Bot] " ZH_AUTHOR " — " ZH_COPYRIGHT
+                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                return;
+        }
+        return;
+    }
+
+    if (type != PLUGIN_MENU_TYPE_CLIENT) return;
     const anyID clientID = static_cast<anyID>(selectedItemID);
 
     auto runJob = [&](PokeJob job) {
