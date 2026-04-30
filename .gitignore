@@ -35,6 +35,11 @@ ts3sdk/
 dist/
 release/
 
+# Installer artifacts
+installer/output/
+installer/build_*/
+*.exe
+
 # Logs
 *.log
 aqtinstall.log
