@@ -16,7 +16,10 @@ void int16ToFloat(const short* src, float* dst, int n) {
 
 void floatToInt16(const float* src, short* dst, int n) {
     for (int i = 0; i < n; ++i) {
-        float v = src[i] * 32768.0f;
+        float v = src[i];
+        // NaN/Inf safety — bad floats become silence rather than garbage
+        if (!std::isfinite(v)) v = 0.0f;
+        v *= 32768.0f;
         if (v > 32767.0f) v = 32767.0f;
         else if (v < -32768.0f) v = -32768.0f;
         dst[i] = (short)v;
@@ -121,6 +124,14 @@ bool VoiceEngine::processSamples(short* samples, int sampleCount, int channels) 
             applyDistortion(floatScratchOut_.data(), totalSamples, 4.0f);
             applyBandpass(floatScratchOut_.data(), totalSamples, 500.0f, 3000.0f);
             break;
+        case VoicePreset::VolumeBoost: {
+            // Sanity test preset — just 1.5x gain. If THIS doesn't work,
+            // audio pipeline (TS3 ↔ plugin) has a fundamental issue.
+            for (int i = 0; i < totalSamples; ++i) {
+                floatScratchOut_[i] *= 1.5f;
+            }
+            break;
+        }
         case VoicePreset::Off:
         default:
             return false;
@@ -138,9 +149,14 @@ void VoiceEngine::applyRobot(float* buffer, int n) {
     const float dt = 1.0f / kSampleRate;
     const float twoPi = 6.2831853f;
     const float hz = cfg_.robotHz > 0.5f ? cfg_.robotHz : 30.0f;
+    // Use AM (amplitude modulation: 0.5 + 0.5*sin) instead of full ring mod
+    // (* sin). AM never zero-crosses → no audible silence chunks → VAD
+    // always triggers. Boost output 1.4x to compensate for AM attenuation.
     for (int i = 0; i < n; ++i) {
-        float carrier = std::sin(twoPi * hz * (robotPhase_ * dt));
-        buffer[i] *= carrier;
+        float carrier = 0.5f + 0.5f * std::sin(twoPi * hz * (robotPhase_ * dt));
+        buffer[i] *= carrier * 1.4f;
+        if (buffer[i] > 1.0f) buffer[i] = 1.0f;
+        else if (buffer[i] < -1.0f) buffer[i] = -1.0f;
         robotPhase_ += 1.0f;
         if (robotPhase_ > kSampleRate) robotPhase_ -= kSampleRate;
     }
@@ -163,26 +179,27 @@ void VoiceEngine::applyEcho(float* buffer, int n) {
 }
 
 // Soft saturation distortion — produces raspy / overdriven voice.
+// No final attenuation: clipped output is already in [-1, 1] range.
 void VoiceEngine::applyDistortion(float* buffer, int n, float drive) {
     if (drive < 1.0f) drive = 1.0f;
     if (drive > 10.0f) drive = 10.0f;
     for (int i = 0; i < n; ++i) {
         float x = buffer[i] * drive;
-        // tanh-like soft clip without expensive tanh
+        // Soft clip via reciprocal — smooth saturation
         if (x > 1.0f) x = 1.0f - (1.0f / (1.0f + (x - 1.0f) * 2.0f));
         else if (x < -1.0f) x = -1.0f + (1.0f / (1.0f + (-x - 1.0f) * 2.0f));
-        buffer[i] = x * 0.7f;  // attenuate slightly to avoid clipping
+        buffer[i] = x;
     }
 }
 
-// Whisper — strongly attenuate signal, mix in pseudo-random noise modulated
-// by signal envelope. Sounds breathy.
+// Whisper — attenuate voice + mix in noise modulated by signal envelope.
+// Less aggressive attenuation so VAD still fires.
 void VoiceEngine::applyWhisper(float* buffer, int n) {
     for (int i = 0; i < n; ++i) {
         noiseSeed_ = noiseSeed_ * 1103515245u + 12345u;
         float noise = (float)((noiseSeed_ >> 16) & 0x7fff) / 32768.0f - 0.5f;
         float envelope = std::abs(buffer[i]);
-        buffer[i] = buffer[i] * 0.15f + noise * envelope * 3.0f;
+        buffer[i] = buffer[i] * 0.4f + noise * envelope * 2.0f;
     }
 }
 

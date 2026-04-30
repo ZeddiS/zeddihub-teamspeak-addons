@@ -107,6 +107,13 @@ public:
                     tmp = 2.0f * (float)M_PI * tmp / (float)osamp;
                     tmp += (float)k * expct;
                     gSumPhase[k] += tmp;
+                    // Wrap accumulated phase to [-PI, PI] to avoid float
+                    // precision drift over time (otherwise output becomes
+                    // noise after several minutes of continuous use).
+                    constexpr float kPi = 3.14159265f;
+                    constexpr float kTwoPi = 6.28318530f;
+                    while (gSumPhase[k] > kPi) gSumPhase[k] -= kTwoPi;
+                    while (gSumPhase[k] < -kPi) gSumPhase[k] += kTwoPi;
                     float phase = gSumPhase[k];
                     gFFTworksp[2 * k]     = magn * std::cos(phase);
                     gFFTworksp[2 * k + 1] = magn * std::sin(phase);

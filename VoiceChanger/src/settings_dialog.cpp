@@ -123,6 +123,8 @@ void run(VoiceEngine& engine) {
 
     auto* combo = new QComboBox(&dlg);
     combo->addItem(QStringLiteral("Off (passthrough)"),         (int)VoicePreset::Off);
+    combo->addItem(QStringLiteral("Volume Boost (sanity test, 1.5x gain)"),
+                                                                 (int)VoicePreset::VolumeBoost);
     combo->addItem(QStringLiteral("─── Pitch ───"),             -1);
     combo->addItem(QStringLiteral("Helium (+6 půltónů)"),       (int)VoicePreset::Helium);
     combo->addItem(QStringLiteral("Chipmunk (+12 půltónů)"),    (int)VoicePreset::Chipmunk);

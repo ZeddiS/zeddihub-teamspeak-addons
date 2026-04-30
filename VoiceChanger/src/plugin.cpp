@@ -90,7 +90,7 @@ const char* ts3plugin_name() { return "Voice Changer"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.0"; }
+const char* ts3plugin_version() { return "1.2.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)

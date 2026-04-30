@@ -22,6 +22,7 @@ enum class VoicePreset : int {
     Telephone  = 10,  // bandpass 300-3400 Hz (phone call sound)
     Underwater = 11,  // low-pass + slight reverb (muffled)
     Megaphone  = 12,  // distortion + bandpass (PA system)
+    VolumeBoost= 13,  // SANITY TEST — just 1.5x gain (no other DSP)
 };
 
 struct VoiceConfig {
