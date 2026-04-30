@@ -42,6 +42,13 @@ inline float alphaFromCutoff(float fc, float fs) {
 
 VoiceEngine::VoiceEngine() {
     echoBuf_.assign((std::size_t)(kSampleRate * 0.5f), 0.0f);  // up to 500ms
+    // Pre-allocate scratch buffers to avoid heap allocation in audio thread.
+    // TS3 typically delivers chunks of 480 samples * 2 channels = 960. Reserve
+    // generously to handle any future resampling.
+    floatScratchIn_.reserve(8192);
+    floatScratchOut_.reserve(8192);
+    floatScratchIn_.assign(8192, 0.0f);
+    floatScratchOut_.assign(8192, 0.0f);
 }
 
 void VoiceEngine::setConfig(const VoiceConfig& cfg) {
@@ -75,12 +82,16 @@ bool VoiceEngine::processSamples(short* samples, int sampleCount, int channels) 
 
     const int totalSamples = sampleCount * channels;
 
-    floatScratchIn_.resize((std::size_t)totalSamples);
-    floatScratchOut_.resize((std::size_t)totalSamples);
+    // Buffers are pre-allocated to 8192 in constructor. Grow only on
+    // exceptional cases (multi-channel large frames).
+    if ((std::size_t)totalSamples > floatScratchIn_.size()) {
+        floatScratchIn_.resize((std::size_t)totalSamples);
+        floatScratchOut_.resize((std::size_t)totalSamples);
+    }
 
     int16ToFloat(samples, floatScratchIn_.data(), totalSamples);
-    std::copy(floatScratchIn_.begin(), floatScratchIn_.end(),
-              floatScratchOut_.begin());
+    std::memcpy(floatScratchOut_.data(), floatScratchIn_.data(),
+                totalSamples * sizeof(float));
 
     switch (cfg.preset) {
         case VoicePreset::Helium:
