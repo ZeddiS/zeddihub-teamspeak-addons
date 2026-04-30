@@ -27,12 +27,12 @@ New-Item -ItemType Directory -Force -Path $output | Out-Null
 
 # plugin folder -> (title, slug, version, dll-base, repo-url)
 $plugins = @(
-    @{ src="pokebot";       slug="pokebot";       title="Poke Bot";       version="1.2.0"; dllBase="zeddihub_pokebot"; repo="https://github.com/ZeddiS/ts3-pokebot" }
-    @{ src="Follow";        slug="follow";        title="Follow";         version="1.2.0"; dllBase="follow";           repo="https://github.com/ZeddiS/ts3-follow" }
-    @{ src="MoveSpam";      slug="movespam";      title="MoveSpam";       version="1.1.0"; dllBase="movespam";         repo="https://github.com/ZeddiS/ts3-movespam" }
-    @{ src="VoiceChanger";  slug="voicechanger";  title="Voice Changer";  version="1.2.3"; dllBase="voicechanger";     repo="https://github.com/ZeddiS/ts3-voicechanger" }
-    @{ src="AutoReconnect"; slug="autoreconnect"; title="AutoReconnect";  version="1.0.0"; dllBase="autoreconnect";    repo="https://github.com/ZeddiS/ts3-autoreconnect" }
-    @{ src="GreetingBot";   slug="greetingbot";   title="Greeting Bot";   version="1.0.0"; dllBase="greetingbot";      repo="https://github.com/ZeddiS/ts3-greetingbot" }
+    @{ src="pokebot";       slug="pokebot";       title="Poke Bot";       version="1.2.1"; dllBase="zeddihub_pokebot"; repo="https://github.com/ZeddiS/zeddihub-teamspeak-pokebot" }
+    @{ src="Follow";        slug="follow";        title="Follow";         version="1.2.1"; dllBase="follow";           repo="https://github.com/ZeddiS/zeddihub-teamspeak-follow" }
+    @{ src="MoveSpam";      slug="movespam";      title="MoveSpam";       version="1.2.0"; dllBase="movespam";         repo="https://github.com/ZeddiS/zeddihub-teamspeak-movespam" }
+    @{ src="VoiceChanger";  slug="voicechanger";  title="Voice Changer";  version="1.2.4"; dllBase="voicechanger";     repo="https://github.com/ZeddiS/zeddihub-teamspeak-voicechanger" }
+    @{ src="AutoReconnect"; slug="autoreconnect"; title="AutoReconnect";  version="1.0.1"; dllBase="autoreconnect";    repo="https://github.com/ZeddiS/zeddihub-teamspeak-autoreconnect" }
+    @{ src="GreetingBot";   slug="greetingbot";   title="Greeting Bot";   version="1.0.1"; dllBase="greetingbot";      repo="https://github.com/ZeddiS/zeddihub-teamspeak-greetingbot" }
 )
 
 $tmpl = Get-Content $template -Raw

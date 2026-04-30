@@ -96,7 +96,7 @@ void run(VoiceEngine& engine) {
     VoiceConfig current = engine.config();
 
     QDialog dlg;
-    dlg.setWindowTitle(QStringLiteral("Voice Changer — Settings"));
+    dlg.setWindowTitle(QStringLiteral("Voice Changer - Settings"));
     dlg.setMinimumWidth(440);
     dlg.setStyleSheet(QString::fromUtf8(kStyleSheet));
 
@@ -107,8 +107,8 @@ void run(VoiceEngine& engine) {
     auto refreshStatus = [&] {
         statusLabel->setText(
             engine.enabled()
-                ? QStringLiteral("● <b>Voice Changer ZAPNUT</b>")
-                : QStringLiteral("○ Voice Changer vypnut"));
+                ? QStringLiteral("<b>Voice Changer ON</b>")
+                : QStringLiteral("Voice Changer off"));
         statusLabel->setStyleSheet(
             engine.enabled()
                 ? QStringLiteral("color: #57f287; font-size: 13px; padding: 6px;")
@@ -118,7 +118,7 @@ void run(VoiceEngine& engine) {
     layout->addWidget(statusLabel);
 
     // Voice preset combo ------------------------------------------------
-    auto* presetGroup = new QGroupBox(QStringLiteral("Hlas"), &dlg);
+    auto* presetGroup = new QGroupBox(QStringLiteral("Voice"), &dlg);
     auto* presetLayout = new QVBoxLayout(presetGroup);
 
     auto* combo = new QComboBox(&dlg);
@@ -126,10 +126,10 @@ void run(VoiceEngine& engine) {
     combo->addItem(QStringLiteral("Volume Boost (sanity test, 1.5x gain)"),
                                                                  (int)VoicePreset::VolumeBoost);
     combo->addItem(QStringLiteral("─── Pitch ───"),             -1);
-    combo->addItem(QStringLiteral("Helium (+6 půltónů)"),       (int)VoicePreset::Helium);
-    combo->addItem(QStringLiteral("Chipmunk (+12 půltónů)"),    (int)VoicePreset::Chipmunk);
-    combo->addItem(QStringLiteral("Deep (-4 půltóny)"),         (int)VoicePreset::Deep);
-    combo->addItem(QStringLiteral("Demon (-7 půltónů + grit)"), (int)VoicePreset::Demon);
+    combo->addItem(QStringLiteral("Helium (+6 semitones)"),       (int)VoicePreset::Helium);
+    combo->addItem(QStringLiteral("Chipmunk (+12 semitones)"),    (int)VoicePreset::Chipmunk);
+    combo->addItem(QStringLiteral("Deep (-4 semitones)"),         (int)VoicePreset::Deep);
+    combo->addItem(QStringLiteral("Demon (-7 semitones + grit)"), (int)VoicePreset::Demon);
     combo->addItem(QStringLiteral("Custom pitch (slider)"),     (int)VoicePreset::Custom);
     combo->addItem(QStringLiteral("─── Effects ───"),           -1);
     combo->addItem(QStringLiteral("Robot (ring modulation)"),   (int)VoicePreset::Robot);
@@ -169,7 +169,7 @@ void run(VoiceEngine& engine) {
     layout->addWidget(presetGroup);
 
     // Echo settings ----------------------------------------------------
-    auto* echoGroup = new QGroupBox(QStringLiteral("Echo (jen pro Echo preset)"), &dlg);
+    auto* echoGroup = new QGroupBox(QStringLiteral("Echo (only for Echo preset)"), &dlg);
     auto* echoForm = new QFormLayout(echoGroup);
 
     auto* echoDelaySpin = new QDoubleSpinBox(&dlg);
@@ -190,11 +190,11 @@ void run(VoiceEngine& engine) {
 
     // Buttons ----------------------------------------------------------
     auto* btnRow = new QHBoxLayout();
-    auto* enableBtn  = new QPushButton(QStringLiteral("Zapnout Voice Changer"), &dlg);
+    auto* enableBtn  = new QPushButton(QStringLiteral("Enable Voice Changer"), &dlg);
     enableBtn->setObjectName("enableBtn");
-    auto* disableBtn = new QPushButton(QStringLiteral("Vypnout Voice Changer"), &dlg);
+    auto* disableBtn = new QPushButton(QStringLiteral("Disable Voice Changer"), &dlg);
     disableBtn->setObjectName("disableBtn");
-    auto* closeBtn   = new QPushButton(QStringLiteral("Zavřít"), &dlg);
+    auto* closeBtn   = new QPushButton(QStringLiteral("Close"), &dlg);
     btnRow->addWidget(enableBtn);
     btnRow->addWidget(disableBtn);
     btnRow->addStretch();

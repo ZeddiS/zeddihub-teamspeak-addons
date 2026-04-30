@@ -146,7 +146,7 @@ const char* ts3plugin_name() { return "Voice Changer"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.3"; }
+const char* ts3plugin_version() { return "1.2.4"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -163,8 +163,8 @@ __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
     return ZH_DESC(
-        "Voice Changer - DSP efekty pro mikrofon (Helium, Demon, "
-        "Robot, Echo, Custom pitch). Plugins menu -> Voice Changer.");
+        "Voice Changer - real-time DSP effects on outgoing microphone "
+        "audio (Helium, Demon, Robot, Echo, Custom pitch). Plugins menu -> Voice Changer.");
 }
 
 #ifdef _WIN32
@@ -230,14 +230,14 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
         VoiceConfig c = g_engine->config();
         c.enabled = true;
         g_engine->setConfig(c);
-        notifyTab(schid, "[VoiceChanger] Zapnuto.");
+        notifyTab(schid, "[VoiceChanger] Enabled.");
         return 0;
     }
     if (std::strcmp(command, "off") == 0 || std::strcmp(command, "disable") == 0) {
         VoiceConfig c = g_engine->config();
         c.enabled = false;
         g_engine->setConfig(c);
-        notifyTab(schid, "[VoiceChanger] Vypnuto.");
+        notifyTab(schid, "[VoiceChanger] Disabled.");
         return 0;
     }
     if (std::strcmp(command, "settings") == 0) {
@@ -350,8 +350,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         }
         case MENU_ID_ABOUT:
             notifyTab(schid,
-                "[VoiceChanger v1.2.3] " ZH_AUTHOR " - " ZH_COPYRIGHT
-                " - https://github.com/ZeddiS/ts3-voicechanger");
+                "[VoiceChanger] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                " | https://github.com/ZeddiS/zeddihub-teamspeak-voicechanger");
             break;
     }
 }

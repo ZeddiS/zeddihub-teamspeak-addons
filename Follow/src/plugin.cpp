@@ -102,7 +102,7 @@ void stopFollowingInternal(uint64 schid, const char* reason) {
     g_workerCv.notify_all();
     char buf[256];
     std::snprintf(buf, sizeof(buf),
-                  "[Follow] Sledování zastaveno%s%s.",
+                  "[Follow] Following stopped%s%s.",
                   (reason && *reason) ? ": " : "",
                   reason ? reason : "");
     notifyTab(schid, buf);
@@ -134,7 +134,7 @@ void workerLoop() {
         if (rc != ERROR_ok || targetCh == 0) {
             // Target invisible / left briefly — keep waiting (10s grace)
             if (++silentTicks > 10) {
-                stopFollowingInternal(schid, "target nedostupny pres 10s");
+                stopFollowingInternal(schid, "target unreachable for 10s+");
             }
             continue;
         }
@@ -166,7 +166,7 @@ const char* ts3plugin_name() { return "Follow"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.0"; }
+const char* ts3plugin_version() { return "1.2.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -258,7 +258,7 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
             getClientName(g_followSchid.load(), t, name);
             char buf[256];
             std::snprintf(buf, sizeof(buf),
-                          "[Follow] Aktivni - sleduji '%s' (id=%u). Polling kazdou 1s.",
+                          "[Follow] Active - tracking '%s' (id=%u). Polling every 1s.",
                           name.c_str(), t);
             notifyTab(schid, buf);
         } else {
@@ -313,7 +313,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                     getClientName(g_followSchid.load(), t, name);
                     char buf[256];
                     std::snprintf(buf, sizeof(buf),
-                                  "[Follow] Aktivni - sleduji '%s' (id=%u).",
+                                  "[Follow] Active - tracking '%s' (id=%u).",
                                   name.c_str(), t);
                     notifyTab(schid, buf);
                 } else {
@@ -323,8 +323,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             }
             case MENU_ID_GLOBAL_ABOUT:
                 notifyTab(schid,
-                    "[Follow v1.2.0] " ZH_AUTHOR " - " ZH_COPYRIGHT
-                    " - https://github.com/ZeddiS/ts3-follow");
+                    "[Follow] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                    " | https://github.com/ZeddiS/zeddihub-teamspeak-follow");
                 return;
         }
         return;
@@ -344,8 +344,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         getClientName(schid, clientID, name);
         char buf[256];
         std::snprintf(buf, sizeof(buf),
-                      "[Follow] Sleduji '%s' (id=%u). Polling 1s. "
-                      "Stop: pravym kliknutim nebo /follow stop.",
+                      "[Follow] Tracking '%s' (id=%u). Polling every 1s. "
+                      "Stop via right-click menu or /follow stop.",
                       name.c_str(), clientID);
         notifyTab(schid, buf);
     } else if (menuItemID == MENU_ID_STOP) {

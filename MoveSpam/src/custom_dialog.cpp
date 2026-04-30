@@ -87,11 +87,11 @@ Result runMoveSpamDialog(uint64 currentChannel) {
     form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
     auto* destEdit = new QLineEdit(&dlg);
-    destEdit->setPlaceholderText(QStringLiteral("Channel name nebo ID"));
-    form->addRow(QStringLiteral("Cílový kanál:"), destEdit);
+    destEdit->setPlaceholderText(QStringLiteral("Channel name or ID"));
+    form->addRow(QStringLiteral("Target channel:"), destEdit);
 
     auto* hint = new QLabel(
-        QStringLiteral("Zadej buď ID kanálu (např. 42) nebo přesný název."),
+        QStringLiteral("Enter either channel ID (e.g. 42) or exact channel name."),
         &dlg);
     hint->setStyleSheet(QStringLiteral("color: #a3a6aa; font-size: 11px;"));
     form->addRow(QString(), hint);
@@ -135,23 +135,23 @@ Result runMoveSpamDialog(uint64 currentChannel) {
                      maxSlider, &QSlider::setValue);
     maxRow->addWidget(maxSlider, 1);
     maxRow->addWidget(maxSpin);
-    form->addRow(QStringLiteral("Max moves (0 = nekonečno):"), maxRow);
+    form->addRow(QStringLiteral("Max moves (0 = unlimited):"), maxRow);
 
     layout->addLayout(form);
 
     auto* note = new QLabel(
-        QStringLiteral("Plugin bude movovat target tam-zpět mezi jeho "
-                       "aktuálním kanálem a cílem. Zadané ∞ nezastaví — "
-                       "musíš stop přes context menu nebo /movespam stop."),
+        QStringLiteral("Plugin will repeatedly move the target between their "
+                       "current channel and the target channel. Set 0 = unlimited; "
+                       "stop manually via right-click menu or /movespam stop."),
         &dlg);
     note->setWordWrap(true);
     note->setStyleSheet(QStringLiteral("color: #a3a6aa; font-size: 11px; padding: 6px 0;"));
     layout->addWidget(note);
 
     auto* btnBox = new QDialogButtonBox(&dlg);
-    auto* runBtn = btnBox->addButton(QStringLiteral("Spustit"),
+    auto* runBtn = btnBox->addButton(QStringLiteral("Start"),
                                      QDialogButtonBox::AcceptRole);
-    btnBox->addButton(QStringLiteral("Zrušit"),
+    btnBox->addButton(QStringLiteral("Cancel"),
                       QDialogButtonBox::RejectRole);
     runBtn->setDefault(true);
     layout->addWidget(btnBox);

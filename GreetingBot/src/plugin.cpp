@@ -48,7 +48,7 @@ char* g_pluginID = nullptr;
 
 std::atomic<bool> g_enabled{false};
 std::mutex g_cfgMu;
-std::string g_greeting = "Vitej {name}! :)";
+std::string g_greeting = "Welcome {name}! :)";
 
 enum MenuID : int {
     MENU_ID_TOGGLE = 1,
@@ -121,7 +121,7 @@ const char* ts3plugin_name() { return "Greeting Bot"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.0.0"; }
+const char* ts3plugin_version() { return "1.0.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -138,8 +138,8 @@ __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
     return ZH_DESC(
-        "GreetingBot - automaticky pokne uzivatele kdyz vstoupi do tveho "
-        "kanalu. Plugins menu -> Greeting Bot.");
+        "GreetingBot - automatically pokes any user that joins your "
+        "current channel. Plugins menu -> Greeting Bot.");
 }
 
 #ifdef _WIN32
@@ -283,13 +283,13 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         }
         case MENU_ID_SET_GREETING:
             notifyTab(schid,
-                "[GreetingBot] V chat napis: /greet set <text>. "
-                "Pouzij {name} jako placeholder pro nickname.");
+                "[GreetingBot] In chat type: /greet set <text>. "
+                "Use {name} as nickname placeholder.");
             break;
         case MENU_ID_ABOUT:
             notifyTab(schid,
-                "[GreetingBot] " ZH_AUTHOR " - " ZH_COPYRIGHT
-                " - https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                "[GreetingBot] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                " | https://github.com/ZeddiS/zeddihub-teamspeak-greetingbot");
             break;
     }
 }
@@ -326,7 +326,7 @@ void ts3plugin_onClientMoveEvent(uint64 schid,
         std::lock_guard<std::mutex> lk(g_cfgMu);
         msg = substituteName(g_greeting, name);
     }
-    if (msg.empty()) msg = "Vitej!";
+    if (msg.empty()) msg = "Welcome!";
 
     ts3Functions.requestClientPoke(schid, clientID, msg.c_str(), nullptr);
 }

@@ -224,7 +224,7 @@ const char* ts3plugin_name() { return "AutoReconnect"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.0.0"; }
+const char* ts3plugin_version() { return "1.0.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -383,8 +383,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         }
         case MENU_ID_ABOUT:
             notifyTab(schid,
-                "[AutoReconnect] " ZH_AUTHOR " - " ZH_COPYRIGHT
-                " - https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                "[AutoReconnect] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                " | https://github.com/ZeddiS/zeddihub-teamspeak-autoreconnect");
             break;
     }
 }

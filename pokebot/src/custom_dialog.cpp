@@ -167,7 +167,7 @@ namespace custom_dialog {
 
 void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     QDialog dlg;
-    dlg.setWindowTitle(QStringLiteral("Poke Bot — Custom"));
+    dlg.setWindowTitle(QStringLiteral("Poke Bot - Custom"));
     dlg.setMinimumWidth(500);
     dlg.setStyleSheet(QString::fromUtf8(kStyleSheet));
 
@@ -175,10 +175,10 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     layout->setSpacing(12);
 
     // ====== Mode selector =============================================
-    auto* modeGroup = new QGroupBox(QStringLiteral("Režim"), &dlg);
+    auto* modeGroup = new QGroupBox(QStringLiteral("Mode"), &dlg);
     auto* modeLayout = new QHBoxLayout(modeGroup);
-    auto* radioSchedule = new QRadioButton(QStringLiteral("📅  Schedule (1× za interval)"), &dlg);
-    auto* radioBurst    = new QRadioButton(QStringLiteral("⚡  Burst (rychle za sebou)"), &dlg);
+    auto* radioSchedule = new QRadioButton(QStringLiteral("Schedule (1x per interval)"), &dlg);
+    auto* radioBurst    = new QRadioButton(QStringLiteral("Burst (rapid sequence)"), &dlg);
     radioSchedule->setChecked(true);
     auto* modeBtns = new QButtonGroup(&dlg);
     modeBtns->addButton(radioSchedule, 0);
@@ -189,15 +189,15 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     layout->addWidget(modeGroup);
 
     // ====== Text + chunking ===========================================
-    auto* textGroup = new QGroupBox(QStringLiteral("Zpráva"), &dlg);
+    auto* textGroup = new QGroupBox(QStringLiteral("Message"), &dlg);
     auto* textLayout = new QVBoxLayout(textGroup);
     auto* msgEdit = new QPlainTextEdit(&dlg);
-    msgEdit->setPlainText(QStringLiteral("AHOJ"));
+    msgEdit->setPlainText(QStringLiteral("HELLO"));
     msgEdit->setFixedHeight(80);
-    msgEdit->setPlaceholderText(QStringLiteral("Text poke. TS3 limit ~ 100 znaků / poke."));
+    msgEdit->setPlaceholderText(QStringLiteral("Poke text. TS3 limit ~ 100 chars per poke."));
     textLayout->addWidget(msgEdit);
     auto* chunkChk = new QCheckBox(
-        QStringLiteral("Rozsekat dlouhý text na 100-znakové chunky (každý chunk = 1 poke)"),
+        QStringLiteral("Split long text into 100-char chunks (each chunk = 1 poke)"),
         &dlg);
     chunkChk->setChecked(true);
     textLayout->addWidget(chunkChk);
@@ -213,7 +213,7 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     auto countS  = PairedSlider::make(&dlg, 1, 500, 20);
     auto minS    = PairedSlider::make(&dlg, 200, 30000, 3000, "ms");
     auto maxS    = PairedSlider::make(&dlg, 200, 30000, 5000, "ms");
-    scheduleForm->addRow(QStringLiteral("Počet poke:"),  countS.layout());
+    scheduleForm->addRow(QStringLiteral("Poke count:"),  countS.layout());
     scheduleForm->addRow(QStringLiteral("Interval min:"), minS.layout());
     scheduleForm->addRow(QStringLiteral("Interval max:"), maxS.layout());
     paramStack->addWidget(schedulePage);
@@ -224,10 +224,10 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     burstForm->setVerticalSpacing(10);
     auto countB     = PairedSlider::make(&dlg, 1, 500, 50);
     auto burstDelay = PairedSlider::make(&dlg, 50, 1000, 200, "ms");
-    burstForm->addRow(QStringLiteral("Počet poke:"),    countB.layout());
+    burstForm->addRow(QStringLiteral("Poke count:"),    countB.layout());
     burstForm->addRow(QStringLiteral("Burst delay:"),   burstDelay.layout());
     auto* burstHint = new QLabel(
-        QStringLiteral("⚠  Pod 100ms riskuješ anti-flood kick z TS3 serveru."),
+        QStringLiteral("Warning: under 100ms risks anti-flood kick from TS3 server."),
         &dlg);
     burstHint->setStyleSheet(QStringLiteral("color: #f0b132; font-size: 11px;"));
     burstForm->addRow(QString(), burstHint);
@@ -243,9 +243,9 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
 
     // ====== Buttons ===================================================
     auto* btnBox = new QDialogButtonBox(&dlg);
-    auto* runBtn = btnBox->addButton(QStringLiteral("Spustit"),
+    auto* runBtn = btnBox->addButton(QStringLiteral("Start"),
                                      QDialogButtonBox::AcceptRole);
-    btnBox->addButton(QStringLiteral("Zrušit"),
+    btnBox->addButton(QStringLiteral("Cancel"),
                       QDialogButtonBox::RejectRole);
     runBtn->setDefault(true);
     layout->addWidget(btnBox);

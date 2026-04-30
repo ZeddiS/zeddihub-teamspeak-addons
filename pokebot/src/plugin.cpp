@@ -133,8 +133,8 @@ __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
     return ZH_DESC(
-        "Poke Bot - pravym klikem na uzivatele vyber preset poke kampan "
-        "nebo otevri custom dialog (burst / schedule mode).");
+        "Poke Bot - right-click a client to launch preset poke campaigns "
+        "or open the custom dialog (burst / schedule mode).");
 }
 
 #ifdef _WIN32
@@ -208,14 +208,14 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
     if (!command) return 1;
     if (std::strcmp(command, "stop") == 0) {
         if (g_engine) g_engine->stop();
-        notifyTab(schid, "[Poke Bot] Kampaň zastavena.");
+        notifyTab(schid, "[Poke Bot] Campaign stopped.");
         return 0;
     }
     if (std::strcmp(command, "status") == 0) {
         if (g_engine && g_engine->isRunning()) {
             char buf[128];
             std::snprintf(buf, sizeof(buf),
-                          "[Poke Bot] Bezi: %d / %d poke odeslano.",
+                          "[Poke Bot] Running: %d / %d pokes sent.",
                           g_engine->sent(), g_engine->total());
             notifyTab(schid, buf);
         } else {
@@ -273,21 +273,21 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         switch (menuItemID) {
             case MENU_ID_GLOBAL_STOP:
                 g_engine->stop();
-                notifyTab(schid, "[Poke Bot] Kampaň zastavena.");
+                notifyTab(schid, "[Poke Bot] Campaign stopped.");
                 return;
             case MENU_ID_GLOBAL_STATUS: {
                 char buf[160];
                 std::snprintf(buf, sizeof(buf),
-                              "[Poke Bot] %s — %d / %d poke odeslano.",
-                              g_engine->isRunning() ? "běží" : "idle",
+                              "[Poke Bot] %s - %d / %d pokes sent.",
+                              g_engine->isRunning() ? "running" : "idle",
                               g_engine->sent(), g_engine->total());
                 notifyTab(schid, buf);
                 return;
             }
             case MENU_ID_GLOBAL_ABOUT:
                 notifyTab(schid,
-                    "[Poke Bot] " ZH_AUTHOR " — " ZH_COPYRIGHT
-                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                    "[Poke Bot] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                    " | https://github.com/ZeddiS/zeddihub-teamspeak-pokebot");
                 return;
         }
         return;
@@ -300,7 +300,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         g_engine->start(job);
         char buf[160];
         std::snprintf(buf, sizeof(buf),
-                      "[Poke Bot] '%s' spusten — %d poke, mod=%s.",
+                      "[Poke Bot] '%s' started - %d pokes, mode=%s.",
                       job.label.c_str(),
                       job.count,
                       job.mode == PokeMode::Burst ? "Burst" : "Schedule");
@@ -328,7 +328,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             break;
         case MENU_ID_STOP:
             g_engine->stop();
-            notifyTab(schid, "[Poke Bot] Kampaň zastavena.");
+            notifyTab(schid, "[Poke Bot] Campaign stopped.");
             break;
         default:
             break;

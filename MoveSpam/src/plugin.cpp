@@ -227,14 +227,14 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
     if (!command) return 1;
     if (std::strcmp(command, "stop") == 0) {
         if (g_engine) g_engine->stop();
-        notifyTab(schid, "[MoveSpam] Zastaveno.");
+        notifyTab(schid, "[MoveSpam] Stopped.");
         return 0;
     }
     if (std::strcmp(command, "status") == 0) {
         char buf[128];
         std::snprintf(buf, sizeof(buf),
-                      "[MoveSpam] %s — %d move odeslano.",
-                      (g_engine && g_engine->isRunning()) ? "běží" : "idle",
+                      "[MoveSpam] %s - %d moves sent.",
+                      (g_engine && g_engine->isRunning()) ? "running" : "idle",
                       g_engine ? g_engine->sent() : 0);
         notifyTab(schid, buf);
         return 0;
@@ -249,7 +249,7 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
     *menuItems = static_cast<PluginMenuItem**>(
         std::malloc(sizeof(PluginMenuItem*) * 7));
     (*menuItems)[0] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_BASIC,
-                                   "MoveSpam: Basic (current ↔ default)");
+                                   "MoveSpam: Basic (current <-> default)");
     (*menuItems)[1] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_CUSTOM,
                                    "MoveSpam: Custom...");
     (*menuItems)[2] = makeMenuItem(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_STOP,
@@ -282,21 +282,21 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         switch (menuItemID) {
             case MENU_ID_GLOBAL_STOP:
                 g_engine->stop();
-                notifyTab(schid, "[MoveSpam] Zastaveno.");
+                notifyTab(schid, "[MoveSpam] Stopped.");
                 return;
             case MENU_ID_GLOBAL_STATUS: {
                 char buf[160];
                 std::snprintf(buf, sizeof(buf),
-                              "[MoveSpam] %s — %d move odeslano.",
-                              g_engine->isRunning() ? "běží" : "idle",
+                              "[MoveSpam] %s - %d moves sent.",
+                              g_engine->isRunning() ? "running" : "idle",
                               g_engine->sent());
                 notifyTab(schid, buf);
                 return;
             }
             case MENU_ID_GLOBAL_ABOUT:
                 notifyTab(schid,
-                    "[MoveSpam] " ZH_AUTHOR " — " ZH_COPYRIGHT
-                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                    "[MoveSpam] " ZH_AUTHOR " | " ZH_COPYRIGHT
+                    " | https://github.com/ZeddiS/zeddihub-teamspeak-movespam");
                 return;
         }
         return;
@@ -310,8 +310,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             uint64 cur = getCurrentChannelOf(schid, clientID);
             uint64 def = getDefaultChannel(schid);
             if (cur == 0 || def == 0 || cur == def) {
-                notifyTab(schid, "[MoveSpam] Nepodařilo se zjistit kanály "
-                                 "(target nebo default chybí, nebo jsou stejné).");
+                notifyTab(schid, "[MoveSpam] Could not resolve channels "
+                                 "(target or default missing, or they are the same).");
                 return;
             }
             MoveJob j;
@@ -324,7 +324,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             g_engine->start(j);
             char buf[160];
             std::snprintf(buf, sizeof(buf),
-                          "[MoveSpam] Basic spuštěn (cur=%llu ↔ def=%llu).",
+                          "[MoveSpam] Basic mode started (cur=%llu <-> def=%llu).",
                           (unsigned long long)cur, (unsigned long long)def);
             notifyTab(schid, buf);
             break;
@@ -339,8 +339,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                 dest = findChannelByName(schid, r.destName);
             }
             if (dest == 0 || cur == 0 || cur == dest) {
-                notifyTab(schid, "[MoveSpam] Cílový kanál neresolvnut "
-                                 "nebo je shodný s aktuálním.");
+                notifyTab(schid, "[MoveSpam] Target channel not resolved "
+                                 "or same as current.");
                 return;
             }
             MoveJob j;
@@ -351,12 +351,12 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             j.intervalMs = r.intervalMs;
             j.maxMoves = r.maxMoves;
             g_engine->start(j);
-            notifyTab(schid, "[MoveSpam] Custom spuštěn.");
+            notifyTab(schid, "[MoveSpam] Custom mode started.");
             break;
         }
         case MENU_ID_STOP:
             g_engine->stop();
-            notifyTab(schid, "[MoveSpam] Zastaveno.");
+            notifyTab(schid, "[MoveSpam] Stopped.");
             break;
     }
 }

@@ -23,22 +23,19 @@ README, CHANGELOG a releases. Tento repo je **index / collection / build infrast
 Otevři repo libovolného pluginu výše a v jeho **Releases**:
 
 ### A) Installer (.exe) — doporučené
-Stáhni **`<plugin>-Setup-vX.Y.Z.exe`** a spusť.
+Stáhni **`<plugin>-Setup-vX.Y.Z.exe`** a spusť. Wizard automaticky detekuje TS3 verzi, nabídne zavření TS3 a nainstaluje správnou DLL do `%APPDATA%\TS3Client\plugins\`.
 
-Wizard:
-1. Detekuje TS3 verzi a vybere správnou API DLL (23 / 24 / 25 / 26)
-2. Detekuje běžící TS3, nabídne uzavření
-3. Nainstaluje DLL do `%APPDATA%\TS3Client\plugins\` (per-user, bez admin)
-4. Zaregistruje uninstaller v Add/Remove Programs
+### B) Raw DLL (manuální)
+Stáhni přímo .dll soubor podle své TS3 verze:
 
-### B) Manuální (.zip)
-Vyber zip podle své TS3 verze:
-- `*-TS3-3.5.0-api23.zip` — TS3 3.5.0
-- `*-TS3-3.5.1-3.5.5-api24.zip` — TS3 3.5.1 až 3.5.5
-- **`*-TS3-3.5.6-api25.zip`** — TS3 3.5.6 ⭐ nejčastější
-- `*-TS3-3.6+-api26.zip` — TS3 3.6.0+
+| TS3 client | API | File |
+|---|---|---|
+| 3.5.0 | 23 | `<plugin>_api23_win64.dll` |
+| 3.5.1 - 3.5.5 | 24 | `<plugin>_api24_win64.dll` |
+| **3.5.6** ⭐ | **25** | `<plugin>_api25_win64.dll` |
+| 3.6.x+ | 26 | `<plugin>_api26_win64.dll` |
 
-Rozbal a zkopíruj DLL do `%APPDATA%\TS3Client\plugins\`. V TS3 → Settings → Plugins → Reload All → zaškrtni Enabled.
+Zkopíruj do `%APPDATA%\TS3Client\plugins\`. V TS3 → Settings → Plugins → Reload All → zaškrtni Enabled.
 
 ## Repo struktura
 
