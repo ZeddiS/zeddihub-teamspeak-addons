@@ -1,16 +1,19 @@
-// Follow — TeamSpeak 3 plugin
+// Follow — TeamSpeak 3 plugin (v1.2.0 polling-based)
 //
 // Right-click any client → "Follow Bot: Start Following".
-// When that client changes channel, this plugin auto-moves us into the
-// same channel. "Follow Bot: Stop Following" cancels.
-//
-// Single-target mode with auto-stop on move error.
+// A worker thread polls the target's channel every 1 second and moves us
+// in if we're not already there. The plugin NEVER auto-stops on errors —
+// only manual STOP or plugin shutdown ends the follow.
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <string>
+#include <thread>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -47,6 +50,11 @@ std::atomic<bool>     g_active{false};
 std::atomic<uint64>   g_followSchid{0};
 std::atomic<anyID>    g_followClientID{0};
 
+std::thread g_worker;
+std::atomic<bool> g_workerStop{false};
+std::condition_variable g_workerCv;
+std::mutex g_workerMu;
+
 enum MenuID : int {
     MENU_ID_START = 1,
     MENU_ID_STOP,
@@ -56,7 +64,7 @@ enum MenuID : int {
 };
 
 void notifyTab(uint64 schid, const std::string& text) {
-    if (ts3Functions.printMessage) {
+    if (ts3Functions.printMessage && schid != 0) {
         ts3Functions.printMessage(schid, text.c_str(), PLUGIN_MESSAGE_TARGET_SERVER);
     }
 }
@@ -76,28 +84,6 @@ PluginMenuItem* makeMenuItem(PluginMenuType type, int id, const char* text) {
     return m;
 }
 
-// Move our own client into the same channel as target. Treat "already in
-// channel" as success — we're tracking the user, not failing if we happen
-// to already be where we need to be.
-bool moveSelfTo(uint64 schid, uint64 channelID) {
-    anyID myID = 0;
-    if (ts3Functions.getClientID(schid, &myID) != ERROR_ok) return false;
-    if (myID == 0) return false;
-
-    // Skip move if we're already in target channel (avoid noisy server roundtrip)
-    uint64 myCh = 0;
-    if (ts3Functions.getChannelOfClient(schid, myID, &myCh) == ERROR_ok &&
-        myCh == channelID) {
-        return true;
-    }
-
-    unsigned int err = ts3Functions.requestClientMove(
-        schid, myID, channelID, "", nullptr);
-    // ERROR_channel_already_in (0x0302) — we and target are now in same
-    // channel; benign for follow purposes.
-    return err == ERROR_ok || err == ERROR_channel_already_in;
-}
-
 void getClientName(uint64 schid, anyID clientID, std::string& out) {
     char* name = nullptr;
     if (ts3Functions.getClientVariableAsString(
@@ -109,16 +95,63 @@ void getClientName(uint64 schid, anyID clientID, std::string& out) {
     }
 }
 
-void stopFollowing(uint64 schid, const char* reason) {
+void stopFollowingInternal(uint64 schid, const char* reason) {
     if (!g_active.exchange(false)) return;
     g_followSchid.store(0);
     g_followClientID.store(0);
+    g_workerCv.notify_all();
     char buf[256];
     std::snprintf(buf, sizeof(buf),
                   "[Follow] Sledování zastaveno%s%s.",
                   (reason && *reason) ? ": " : "",
                   reason ? reason : "");
     notifyTab(schid, buf);
+}
+
+// Polling worker -----------------------------------------------------------
+// Every poll interval, check target's current channel and our own. If
+// different, request move. Never stops itself on errors — only when
+// g_active is set false externally.
+void workerLoop() {
+    constexpr auto kPollInterval = std::chrono::milliseconds(1000);
+    int silentTicks = 0;
+
+    while (!g_workerStop.load()) {
+        std::unique_lock<std::mutex> lk(g_workerMu);
+        g_workerCv.wait_for(lk, kPollInterval, [] {
+            return g_workerStop.load() || !g_active.load();
+        });
+        if (g_workerStop.load()) break;
+        if (!g_active.load()) continue;
+
+        const uint64 schid = g_followSchid.load();
+        const anyID  target = g_followClientID.load();
+        if (schid == 0 || target == 0) continue;
+
+        // Get target channel
+        uint64 targetCh = 0;
+        unsigned int rc = ts3Functions.getChannelOfClient(schid, target, &targetCh);
+        if (rc != ERROR_ok || targetCh == 0) {
+            // Target invisible / left briefly — keep waiting (10s grace)
+            if (++silentTicks > 10) {
+                stopFollowingInternal(schid, "target nedostupny pres 10s");
+            }
+            continue;
+        }
+        silentTicks = 0;
+
+        // Get our channel
+        anyID myID = 0;
+        if (ts3Functions.getClientID(schid, &myID) != ERROR_ok || myID == 0) continue;
+        uint64 myCh = 0;
+        if (ts3Functions.getChannelOfClient(schid, myID, &myCh) != ERROR_ok) continue;
+
+        if (myCh == targetCh) continue;  // already following
+
+        // Try to move. Ignore return value — server will fail silently if
+        // we lack permission, and we'll just keep polling.
+        ts3Functions.requestClientMove(schid, myID, targetCh, "", nullptr);
+    }
 }
 
 }  // namespace
@@ -133,7 +166,7 @@ const char* ts3plugin_name() { return "Follow"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.0.0"; }
+const char* ts3plugin_version() { return "1.2.0"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -150,7 +183,8 @@ __declspec(dllexport)
 #endif
 const char* ts3plugin_description() {
     return ZH_DESC(
-        "Follow another client into channels - right-click -> Start Following.");
+        "Follow another client (polling-based, never auto-stops). "
+        "Right-click -> Start Following.");
 }
 
 #ifdef _WIN32
@@ -164,7 +198,9 @@ void ts3plugin_setFunctionPointers(const struct TS3Functions funcs) {
 __declspec(dllexport)
 #endif
 int ts3plugin_init() {
-    logMsg("Follow plugin loaded.");
+    g_workerStop.store(false);
+    g_worker = std::thread(workerLoop);
+    logMsg("Follow plugin loaded (v1.2.0 polling).");
     return 0;
 }
 
@@ -173,6 +209,9 @@ __declspec(dllexport)
 #endif
 void ts3plugin_shutdown() {
     g_active.store(false);
+    g_workerStop.store(true);
+    g_workerCv.notify_all();
+    if (g_worker.joinable()) g_worker.join();
     if (g_pluginID) {
         std::free(g_pluginID);
         g_pluginID = nullptr;
@@ -209,7 +248,7 @@ __declspec(dllexport)
 int ts3plugin_processCommand(uint64 schid, const char* command) {
     if (!command) return 1;
     if (std::strcmp(command, "stop") == 0) {
-        stopFollowing(schid, "manual /follow stop");
+        stopFollowingInternal(schid, "manual /follow stop");
         return 0;
     }
     if (std::strcmp(command, "status") == 0) {
@@ -219,7 +258,7 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
             getClientName(g_followSchid.load(), t, name);
             char buf[256];
             std::snprintf(buf, sizeof(buf),
-                          "[Follow] Aktivní — sleduji '%s' (id=%u).",
+                          "[Follow] Aktivni - sleduji '%s' (id=%u). Polling kazdou 1s.",
                           name.c_str(), t);
             notifyTab(schid, buf);
         } else {
@@ -265,7 +304,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
         }
         switch (menuItemID) {
             case MENU_ID_GLOBAL_STOP:
-                stopFollowing(schid, "manual stop");
+                stopFollowingInternal(schid, "manual stop");
                 return;
             case MENU_ID_GLOBAL_STATUS: {
                 if (g_active.load()) {
@@ -274,18 +313,18 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
                     getClientName(g_followSchid.load(), t, name);
                     char buf[256];
                     std::snprintf(buf, sizeof(buf),
-                                  "[Follow] Aktivní — sleduji '%s' (id=%u).",
+                                  "[Follow] Aktivni - sleduji '%s' (id=%u).",
                                   name.c_str(), t);
                     notifyTab(schid, buf);
                 } else {
-                    notifyTab(schid, "[Follow] Idle — zatím nic nesleduji.");
+                    notifyTab(schid, "[Follow] Idle.");
                 }
                 return;
             }
             case MENU_ID_GLOBAL_ABOUT:
                 notifyTab(schid,
-                    "[Follow] " ZH_AUTHOR " — " ZH_COPYRIGHT
-                    " — https://github.com/ZeddiS/zeddihub-teamspeak-addons");
+                    "[Follow v1.2.0] " ZH_AUTHOR " - " ZH_COPYRIGHT
+                    " - https://github.com/ZeddiS/ts3-follow");
                 return;
         }
         return;
@@ -295,104 +334,22 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
     const anyID clientID = static_cast<anyID>(selectedItemID);
 
     if (menuItemID == MENU_ID_START) {
-        // Get target's current channel and follow there immediately
-        uint64 targetCh = 0;
-        if (ts3Functions.getChannelOfClient(schid, clientID, &targetCh) == ERROR_ok &&
-            targetCh != 0) {
-            moveSelfTo(schid, targetCh);
-        }
+        // Capture target. Worker will poll and move.
         g_followSchid.store(schid);
         g_followClientID.store(clientID);
         g_active.store(true);
+        g_workerCv.notify_all();
 
         std::string name;
         getClientName(schid, clientID, name);
         char buf[256];
         std::snprintf(buf, sizeof(buf),
-                      "[Follow] Sleduji '%s' (id=%u). Stop přes pravé menu nebo /follow stop.",
+                      "[Follow] Sleduji '%s' (id=%u). Polling 1s. "
+                      "Stop: pravym kliknutim nebo /follow stop.",
                       name.c_str(), clientID);
         notifyTab(schid, buf);
     } else if (menuItemID == MENU_ID_STOP) {
-        stopFollowing(schid, nullptr);
-    }
-}
-
-// onClientMoveEvent — fires when ANY client (including us, others) moves
-// between channels. We filter for our target and react.
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-void ts3plugin_onClientMoveEvent(uint64 schid,
-                                 anyID clientID,
-                                 uint64 oldChannelID,
-                                 uint64 newChannelID,
-                                 int visibility,
-                                 const char* moveMessage) {
-    (void)oldChannelID;
-    (void)visibility;
-    (void)moveMessage;
-
-    if (!g_active.load()) return;
-    if (g_followSchid.load() != schid) return;
-    if (g_followClientID.load() != clientID) return;
-    if (newChannelID == 0) {
-        // Target disconnected
-        stopFollowing(schid, "uživatel se odpojil");
-        return;
-    }
-
-    if (!moveSelfTo(schid, newChannelID)) {
-        stopFollowing(schid, "nemám oprávnění do cílového kanálu");
-    }
-}
-
-// onClientMoveTimeoutEvent — target was disconnected by timeout.
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-void ts3plugin_onClientMoveTimeoutEvent(uint64 schid,
-                                        anyID clientID,
-                                        uint64 oldChannelID,
-                                        uint64 newChannelID,
-                                        int visibility,
-                                        const char* timeoutMessage) {
-    (void)oldChannelID;
-    (void)newChannelID;
-    (void)visibility;
-    (void)timeoutMessage;
-
-    if (!g_active.load()) return;
-    if (g_followSchid.load() != schid) return;
-    if (g_followClientID.load() == clientID) {
-        stopFollowing(schid, "uživatel timeoutoval");
-    }
-}
-
-// Server told us we couldn't perform an action. If it's our move that
-// failed, stop following.
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-void ts3plugin_onServerErrorEvent(uint64 schid,
-                                  const char* errorMessage,
-                                  unsigned int error,
-                                  const char* returnCode,
-                                  const char* extraMessage) {
-    (void)errorMessage;
-    (void)returnCode;
-    (void)extraMessage;
-    if (!g_active.load()) return;
-    if (error != ERROR_ok) {
-        // Only auto-stop on clear move/permission failures. Specifically
-        // IGNORE ERROR_channel_already_in (0x0302) — we're tracking, not
-        // failing on a benign "you're already there" notice.
-        if (error == ERROR_channel_invalid_password ||
-            error == ERROR_channel_invalid_id ||
-            error == ERROR_permissions ||
-            error == ERROR_permissions_client_insufficient) {
-            stopFollowing(schid, "server odmítl move (no permission)");
-        }
-        // Other errors: log but keep following.
+        stopFollowingInternal(schid, nullptr);
     }
 }
 

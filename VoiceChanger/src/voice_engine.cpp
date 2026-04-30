@@ -23,6 +23,18 @@ void floatToInt16(const float* src, short* dst, int n) {
     }
 }
 
+// Single-pole low-pass: y = a*x + (1-a)*y_prev
+inline float singlePoleLowpass(float x, float& state, float alpha) {
+    state = alpha * x + (1.0f - alpha) * state;
+    return state;
+}
+
+// Convert cutoff Hz to alpha for single-pole filter at given sample rate.
+// Approximation: alpha = 1 - exp(-2*pi*fc/fs)
+inline float alphaFromCutoff(float fc, float fs) {
+    return 1.0f - std::exp(-2.0f * 3.14159265f * fc / fs);
+}
+
 }  // namespace
 
 VoiceEngine::VoiceEngine() {
@@ -37,6 +49,9 @@ void VoiceEngine::setConfig(const VoiceConfig& cfg) {
     std::fill(echoBuf_.begin(), echoBuf_.end(), 0.0f);
     echoIdx_ = 0;
     robotPhase_ = 0.0f;
+    lpStateLow_ = 0.0f;
+    lpStateHigh_ = 0.0f;
+    hpState_ = 0.0f;
 }
 
 VoiceConfig VoiceEngine::config() const {
@@ -53,9 +68,8 @@ bool VoiceEngine::processSamples(short* samples, int sampleCount, int channels) 
         std::lock_guard<std::mutex> lk(mu_);
         cfg = cfg_;
     }
-    if (cfg.preset == VoicePreset::Off) return false;
+    if (cfg.preset == VoicePreset::Off) return false;  // CRITICAL: never modify on Off
 
-    // Mix to mono (TS3 capture is typically mono = 1 channel anyway)
     const int totalSamples = sampleCount * channels;
 
     floatScratchIn_.resize((std::size_t)totalSamples);
@@ -74,6 +88,8 @@ bool VoiceEngine::processSamples(short* samples, int sampleCount, int channels) 
             break;
         case VoicePreset::Demon:
             applyPitchShift(floatScratchOut_.data(), totalSamples, ratioFromSemitones(-7.0f));
+            // mix in a bit of distortion for grit
+            applyDistortion(floatScratchOut_.data(), totalSamples, 1.5f);
             break;
         case VoicePreset::Deep:
             applyPitchShift(floatScratchOut_.data(), totalSamples, ratioFromSemitones(-4.0f));
@@ -87,6 +103,23 @@ bool VoiceEngine::processSamples(short* samples, int sampleCount, int channels) 
             break;
         case VoicePreset::Echo:
             applyEcho(floatScratchOut_.data(), totalSamples);
+            break;
+        case VoicePreset::Distortion:
+            applyDistortion(floatScratchOut_.data(), totalSamples, cfg.distortionDrive);
+            break;
+        case VoicePreset::Whisper:
+            applyWhisper(floatScratchOut_.data(), totalSamples);
+            break;
+        case VoicePreset::Telephone:
+            applyBandpass(floatScratchOut_.data(), totalSamples, 300.0f, 3400.0f);
+            break;
+        case VoicePreset::Underwater:
+            applyLowpass(floatScratchOut_.data(), totalSamples, 800.0f);
+            applyEcho(floatScratchOut_.data(), totalSamples);  // muffled + slight reverb
+            break;
+        case VoicePreset::Megaphone:
+            applyDistortion(floatScratchOut_.data(), totalSamples, 4.0f);
+            applyBandpass(floatScratchOut_.data(), totalSamples, 500.0f, 3000.0f);
             break;
         case VoicePreset::Off:
         default:
@@ -116,6 +149,7 @@ void VoiceEngine::applyRobot(float* buffer, int n) {
 void VoiceEngine::applyEcho(float* buffer, int n) {
     const std::size_t delaySamples = (std::size_t)(cfg_.echoDelayMs * kSampleRate / 1000.0f);
     const std::size_t bufSize = echoBuf_.size();
+    if (bufSize == 0) return;
     const float fb = std::clamp(cfg_.echoFeedback, 0.0f, 0.95f);
 
     for (int i = 0; i < n; ++i) {
@@ -125,5 +159,50 @@ void VoiceEngine::applyEcho(float* buffer, int n) {
         echoBuf_[echoIdx_] = buffer[i] + delayed * fb;
         echoIdx_ = (echoIdx_ + 1) % bufSize;
         buffer[i] = out;
+    }
+}
+
+// Soft saturation distortion — produces raspy / overdriven voice.
+void VoiceEngine::applyDistortion(float* buffer, int n, float drive) {
+    if (drive < 1.0f) drive = 1.0f;
+    if (drive > 10.0f) drive = 10.0f;
+    for (int i = 0; i < n; ++i) {
+        float x = buffer[i] * drive;
+        // tanh-like soft clip without expensive tanh
+        if (x > 1.0f) x = 1.0f - (1.0f / (1.0f + (x - 1.0f) * 2.0f));
+        else if (x < -1.0f) x = -1.0f + (1.0f / (1.0f + (-x - 1.0f) * 2.0f));
+        buffer[i] = x * 0.7f;  // attenuate slightly to avoid clipping
+    }
+}
+
+// Whisper — strongly attenuate signal, mix in pseudo-random noise modulated
+// by signal envelope. Sounds breathy.
+void VoiceEngine::applyWhisper(float* buffer, int n) {
+    for (int i = 0; i < n; ++i) {
+        noiseSeed_ = noiseSeed_ * 1103515245u + 12345u;
+        float noise = (float)((noiseSeed_ >> 16) & 0x7fff) / 32768.0f - 0.5f;
+        float envelope = std::abs(buffer[i]);
+        buffer[i] = buffer[i] * 0.15f + noise * envelope * 3.0f;
+    }
+}
+
+// Cascaded high-pass + low-pass = bandpass. For telephone/megaphone.
+void VoiceEngine::applyBandpass(float* buffer, int n, float lowHz, float highHz) {
+    const float aLp = alphaFromCutoff(highHz, kSampleRate);
+    const float aHp = alphaFromCutoff(lowHz, kSampleRate);
+    for (int i = 0; i < n; ++i) {
+        // Low-pass
+        lpStateLow_ = aLp * buffer[i] + (1.0f - aLp) * lpStateLow_;
+        // High-pass = signal - low-pass-of-signal
+        hpState_ = aHp * lpStateLow_ + (1.0f - aHp) * hpState_;
+        buffer[i] = lpStateLow_ - hpState_;
+    }
+}
+
+void VoiceEngine::applyLowpass(float* buffer, int n, float cutoffHz) {
+    const float a = alphaFromCutoff(cutoffHz, kSampleRate);
+    for (int i = 0; i < n; ++i) {
+        lpStateHigh_ = a * buffer[i] + (1.0f - a) * lpStateHigh_;
+        buffer[i] = lpStateHigh_;
     }
 }

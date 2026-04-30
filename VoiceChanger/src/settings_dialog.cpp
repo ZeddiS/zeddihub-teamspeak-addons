@@ -122,14 +122,21 @@ void run(VoiceEngine& engine) {
     auto* presetLayout = new QVBoxLayout(presetGroup);
 
     auto* combo = new QComboBox(&dlg);
-    combo->addItem(QStringLiteral("Off (passthrough)"),     (int)VoicePreset::Off);
-    combo->addItem(QStringLiteral("Helium (+6 půltónů)"),   (int)VoicePreset::Helium);
-    combo->addItem(QStringLiteral("Chipmunk (+12 půltónů)"),(int)VoicePreset::Chipmunk);
-    combo->addItem(QStringLiteral("Deep (-4 půltóny)"),     (int)VoicePreset::Deep);
-    combo->addItem(QStringLiteral("Demon (-7 půltónů)"),    (int)VoicePreset::Demon);
-    combo->addItem(QStringLiteral("Robot (ring modulation)"), (int)VoicePreset::Robot);
-    combo->addItem(QStringLiteral("Echo (delay)"),          (int)VoicePreset::Echo);
-    combo->addItem(QStringLiteral("Custom (slider)"),       (int)VoicePreset::Custom);
+    combo->addItem(QStringLiteral("Off (passthrough)"),         (int)VoicePreset::Off);
+    combo->addItem(QStringLiteral("─── Pitch ───"),             -1);
+    combo->addItem(QStringLiteral("Helium (+6 půltónů)"),       (int)VoicePreset::Helium);
+    combo->addItem(QStringLiteral("Chipmunk (+12 půltónů)"),    (int)VoicePreset::Chipmunk);
+    combo->addItem(QStringLiteral("Deep (-4 půltóny)"),         (int)VoicePreset::Deep);
+    combo->addItem(QStringLiteral("Demon (-7 půltónů + grit)"), (int)VoicePreset::Demon);
+    combo->addItem(QStringLiteral("Custom pitch (slider)"),     (int)VoicePreset::Custom);
+    combo->addItem(QStringLiteral("─── Effects ───"),           -1);
+    combo->addItem(QStringLiteral("Robot (ring modulation)"),   (int)VoicePreset::Robot);
+    combo->addItem(QStringLiteral("Echo (delay)"),              (int)VoicePreset::Echo);
+    combo->addItem(QStringLiteral("Distortion (raspy/guttural)"), (int)VoicePreset::Distortion);
+    combo->addItem(QStringLiteral("Whisper (breathy)"),         (int)VoicePreset::Whisper);
+    combo->addItem(QStringLiteral("Telephone (300-3400 Hz)"),   (int)VoicePreset::Telephone);
+    combo->addItem(QStringLiteral("Underwater (muffled)"),      (int)VoicePreset::Underwater);
+    combo->addItem(QStringLiteral("Megaphone (PA system)"),     (int)VoicePreset::Megaphone);
     combo->setCurrentIndex(combo->findData((int)current.preset));
     presetLayout->addWidget(combo);
 
@@ -194,7 +201,9 @@ void run(VoiceEngine& engine) {
 
     auto applyConfig = [&](bool enabledState) {
         VoiceConfig c;
-        c.preset = (VoicePreset)combo->currentData().toInt();
+        int presetVal = combo->currentData().toInt();
+        if (presetVal < 0) presetVal = (int)VoicePreset::Off;  // dividers map to Off
+        c.preset = (VoicePreset)presetVal;
         c.customSemitones = (float)customSpin->value();
         c.echoDelayMs = (float)echoDelaySpin->value();
         c.echoFeedback = (float)echoFbSpin->value();
