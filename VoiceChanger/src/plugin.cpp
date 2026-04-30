@@ -47,10 +47,66 @@ char* g_pluginID = nullptr;
 std::unique_ptr<VoiceEngine> g_engine;
 
 enum MenuID : int {
-    MENU_ID_SETTINGS = 1,
+    // Per-preset shortcuts (one click = pick & enable)
+    MENU_ID_PRESET_OFF        = 1,
+    MENU_ID_PRESET_HELIUM,
+    MENU_ID_PRESET_CHIPMUNK,
+    MENU_ID_PRESET_DEEP,
+    MENU_ID_PRESET_DEMON,
+    MENU_ID_PRESET_ROBOT,
+    MENU_ID_PRESET_ECHO,
+    MENU_ID_PRESET_DISTORTION,
+    MENU_ID_PRESET_WHISPER,
+    MENU_ID_PRESET_TELEPHONE,
+    MENU_ID_PRESET_UNDERWATER,
+    MENU_ID_PRESET_MEGAPHONE,
+    MENU_ID_PRESET_VOLBOOST,
+    // Generic actions
+    MENU_ID_SETTINGS = 100,
     MENU_ID_ENABLE,
     MENU_ID_DISABLE,
+    MENU_ID_TOGGLE_COMPAT,
+    MENU_ID_ABOUT,
 };
+
+VoicePreset menuToPreset(int menuItemID) {
+    switch (menuItemID) {
+        case MENU_ID_PRESET_OFF:        return VoicePreset::Off;
+        case MENU_ID_PRESET_HELIUM:     return VoicePreset::Helium;
+        case MENU_ID_PRESET_CHIPMUNK:   return VoicePreset::Chipmunk;
+        case MENU_ID_PRESET_DEEP:       return VoicePreset::Deep;
+        case MENU_ID_PRESET_DEMON:      return VoicePreset::Demon;
+        case MENU_ID_PRESET_ROBOT:      return VoicePreset::Robot;
+        case MENU_ID_PRESET_ECHO:       return VoicePreset::Echo;
+        case MENU_ID_PRESET_DISTORTION: return VoicePreset::Distortion;
+        case MENU_ID_PRESET_WHISPER:    return VoicePreset::Whisper;
+        case MENU_ID_PRESET_TELEPHONE:  return VoicePreset::Telephone;
+        case MENU_ID_PRESET_UNDERWATER: return VoicePreset::Underwater;
+        case MENU_ID_PRESET_MEGAPHONE:  return VoicePreset::Megaphone;
+        case MENU_ID_PRESET_VOLBOOST:   return VoicePreset::VolumeBoost;
+        default:                        return VoicePreset::Off;
+    }
+}
+
+const char* presetName(VoicePreset p) {
+    switch (p) {
+        case VoicePreset::Off:        return "Off";
+        case VoicePreset::Helium:     return "Helium";
+        case VoicePreset::Chipmunk:   return "Chipmunk";
+        case VoicePreset::Deep:       return "Deep";
+        case VoicePreset::Demon:      return "Demon";
+        case VoicePreset::Robot:      return "Robot";
+        case VoicePreset::Echo:       return "Echo";
+        case VoicePreset::Custom:     return "Custom";
+        case VoicePreset::Distortion: return "Distortion";
+        case VoicePreset::Whisper:    return "Whisper";
+        case VoicePreset::Telephone:  return "Telephone";
+        case VoicePreset::Underwater: return "Underwater";
+        case VoicePreset::Megaphone:  return "Megaphone";
+        case VoicePreset::VolumeBoost:return "VolumeBoost";
+        default:                      return "?";
+    }
+}
 
 void notifyTab(uint64 schid, const char* text) {
     if (ts3Functions.printMessage && schid != 0) {
@@ -90,7 +146,7 @@ const char* ts3plugin_name() { return "Voice Changer"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.2"; }
+const char* ts3plugin_version() { return "1.2.3"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -195,15 +251,39 @@ int ts3plugin_processCommand(uint64 schid, const char* command) {
 __declspec(dllexport)
 #endif
 void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
+    struct Spec { int id; const char* text; };
+    constexpr Spec items[] = {
+        // Per-preset shortcuts — one-click pick & enable
+        { MENU_ID_PRESET_OFF,        "VC: Off (no effect)" },
+        { MENU_ID_PRESET_VOLBOOST,   "VC: Volume Boost (test, 1.5x)" },
+        { MENU_ID_PRESET_HELIUM,     "VC: Helium (+6 semitones)" },
+        { MENU_ID_PRESET_CHIPMUNK,   "VC: Chipmunk (+12 semitones)" },
+        { MENU_ID_PRESET_DEEP,       "VC: Deep (-4 semitones)" },
+        { MENU_ID_PRESET_DEMON,      "VC: Demon (-7 + grit)" },
+        { MENU_ID_PRESET_ROBOT,      "VC: Robot (AM)" },
+        { MENU_ID_PRESET_ECHO,       "VC: Echo (delay)" },
+        { MENU_ID_PRESET_DISTORTION, "VC: Distortion (raspy)" },
+        { MENU_ID_PRESET_WHISPER,    "VC: Whisper (breathy)" },
+        { MENU_ID_PRESET_TELEPHONE,  "VC: Telephone (300-3400 Hz)" },
+        { MENU_ID_PRESET_UNDERWATER, "VC: Underwater (muffled)" },
+        { MENU_ID_PRESET_MEGAPHONE,  "VC: Megaphone (PA)" },
+        // Actions
+        { MENU_ID_SETTINGS,          "VC: Settings..." },
+        { MENU_ID_ENABLE,            "VC: Enable" },
+        { MENU_ID_DISABLE,           "VC: Disable" },
+        { MENU_ID_TOGGLE_COMPAT,     "VC: Toggle Compat Mode (no edited flag)" },
+        { MENU_ID_ABOUT,             "VC: About..." },
+    };
+    constexpr int kCount = sizeof(items) / sizeof(items[0]);
+
     *menuItems = static_cast<PluginMenuItem**>(
-        std::malloc(sizeof(PluginMenuItem*) * 4));
-    (*menuItems)[0] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_SETTINGS,
-                                   "Voice Changer Settings...");
-    (*menuItems)[1] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_ENABLE,
-                                   "Enable Voice Changer");
-    (*menuItems)[2] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_DISABLE,
-                                   "Disable Voice Changer");
-    (*menuItems)[3] = nullptr;
+        std::malloc(sizeof(PluginMenuItem*) * (kCount + 1)));
+    for (int i = 0; i < kCount; ++i) {
+        (*menuItems)[i] = makeMenuItem(PLUGIN_MENU_TYPE_GLOBAL,
+                                       items[i].id,
+                                       items[i].text);
+    }
+    (*menuItems)[kCount] = nullptr;
 
     *menuIcon = static_cast<char*>(std::malloc(PLUGIN_MENU_BUFSZ));
     _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "");
@@ -221,6 +301,21 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
     if (!g_engine) return;
     if (schid == 0) schid = currentSchid();
 
+    // Preset shortcuts — one click sets preset and enables.
+    if (menuItemID >= MENU_ID_PRESET_OFF && menuItemID <= MENU_ID_PRESET_VOLBOOST) {
+        VoiceConfig c = g_engine->config();
+        c.preset = menuToPreset(menuItemID);
+        c.enabled = (c.preset != VoicePreset::Off);
+        g_engine->setConfig(c);
+        char buf[160];
+        std::snprintf(buf, sizeof(buf),
+                      "[VoiceChanger] %s (%s).",
+                      presetName(c.preset),
+                      c.enabled ? "ENABLED" : "disabled");
+        notifyTab(schid, buf);
+        return;
+    }
+
     switch (menuItemID) {
         case MENU_ID_SETTINGS:
             settings_dialog::run(*g_engine);
@@ -229,16 +324,35 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
             VoiceConfig c = g_engine->config();
             c.enabled = true;
             g_engine->setConfig(c);
-            notifyTab(schid, "[VoiceChanger] Zapnuto.");
+            notifyTab(schid, "[VoiceChanger] Enabled.");
             break;
         }
         case MENU_ID_DISABLE: {
             VoiceConfig c = g_engine->config();
             c.enabled = false;
             g_engine->setConfig(c);
-            notifyTab(schid, "[VoiceChanger] Vypnuto.");
+            notifyTab(schid, "[VoiceChanger] Disabled.");
             break;
         }
+        case MENU_ID_TOGGLE_COMPAT: {
+            VoiceConfig c = g_engine->config();
+            c.compatMode = !c.compatMode;
+            g_engine->setConfig(c);
+            char buf[200];
+            std::snprintf(buf, sizeof(buf),
+                "[VoiceChanger] Compat mode %s. %s",
+                c.compatMode ? "ON" : "OFF",
+                c.compatMode
+                    ? "Plugin no longer flags audio as edited - mic should work but voice changes won't transmit."
+                    : "Normal mode - voice changes transmit but mic may be blocked.");
+            notifyTab(schid, buf);
+            break;
+        }
+        case MENU_ID_ABOUT:
+            notifyTab(schid,
+                "[VoiceChanger v1.2.3] " ZH_AUTHOR " - " ZH_COPYRIGHT
+                " - https://github.com/ZeddiS/ts3-voicechanger");
+            break;
     }
 }
 
@@ -255,7 +369,7 @@ void ts3plugin_onEditCapturedVoiceDataEvent(uint64 schid,
     (void)schid;
     if (!g_engine || !samples || sampleCount <= 0) return;
     bool modified = g_engine->processSamples(samples, sampleCount, channels);
-    if (modified && edited) {
+    if (modified && edited && !g_engine->config().compatMode) {
         *edited = 1;
     }
 }

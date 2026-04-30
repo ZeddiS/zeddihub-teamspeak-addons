@@ -33,6 +33,10 @@ struct VoiceConfig {
     float robotHz = 30.0f;
     float distortionDrive = 3.0f;     // 1..10
     bool enabled = false;
+    // Compat mode — when ON, plugin does NOT set *edited=1 in audio
+    // callback. Keeps TS3 voice activity detection working but means
+    // voice modifications may not reach the server. Use for testing.
+    bool compatMode = false;
 };
 
 class VoiceEngine {
