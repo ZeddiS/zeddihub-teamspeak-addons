@@ -15,7 +15,7 @@ $plugins = @(
     @{ src="pokebot";    repo="zeddihub-teamspeak-pokebot";    title="Poke Bot";    version="1.3.0"; clogKey="pokebot";    dllBase="zeddihub_pokebot" }
     @{ src="Follow";     repo="zeddihub-teamspeak-follow";     title="Follow";      version="1.3.0"; clogKey="follow";     dllBase="follow"           }
     @{ src="MoveSpam";   repo="zeddihub-teamspeak-movespam";   title="MoveSpam";    version="1.3.0"; clogKey="movespam";   dllBase="movespam"         }
-    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="SoundBoard";  version="1.1.1"; clogKey="soundboard"; dllBase="soundboard"       }
+    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="SoundBoard";  version="1.2.0"; clogKey="soundboard"; dllBase="soundboard"       }
 )
 
 $desc = @{

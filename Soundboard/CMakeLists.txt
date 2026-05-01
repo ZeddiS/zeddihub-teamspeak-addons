@@ -24,6 +24,8 @@ add_library(soundboard SHARED
     src/plugin.cpp
     src/audio_engine.cpp
     src/audio_engine.h
+    src/audio_converter.cpp
+    src/audio_converter.h
     src/sound_slot.h
     src/soundboard_dialog.cpp
     src/soundboard_dialog.h

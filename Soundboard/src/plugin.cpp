@@ -21,6 +21,7 @@
 #include "ts3_functions.h"
 
 #include "../../common/zh_brand.h"
+#include "audio_converter.h"
 #include "audio_engine.h"
 #include "sound_slot.h"
 #include "soundboard_dialog.h"
@@ -138,7 +139,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.1.1"; }
+const char* ts3plugin_version() { return "1.2.0"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -171,8 +172,11 @@ __declspec(dllexport)
 #endif
 int ts3plugin_init() {
     g_engine = std::make_unique<AudioEngine>();
+    if (!audio_converter::init()) {
+        logMsg("Audio converter init failed - import will only accept WAV", LogLevel_WARNING);
+    }
     soundboard_dialog::loadSlots(g_slots);
-    logMsg("Soundboard plugin loaded.");
+    logMsg("SoundBoard plugin loaded.");
     return 0;
 }
 
@@ -185,6 +189,7 @@ void ts3plugin_shutdown() {
         g_engine.reset();
     }
     g_slots.clear();
+    audio_converter::shutdown();
     if (g_pluginID) {
         std::free(g_pluginID);
         g_pluginID = nullptr;

@@ -8,6 +8,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtGui/QColor>
+#include <QtWidgets/QApplication>
 #include <QtWidgets/QColorDialog>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QFileDialog>
@@ -24,14 +25,25 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
+#include "audio_converter.h"
 #include "audio_engine.h"
 
 namespace {
 
-QString configPath() {
+QString pluginsBaseDir() {
     QString base = QDir::toNativeSeparators(QDir::homePath() + "/AppData/Roaming/TS3Client/plugins");
     QDir().mkpath(base);
-    return QDir::toNativeSeparators(base + "/soundboard.json");
+    return base;
+}
+
+QString configPath() {
+    return QDir::toNativeSeparators(pluginsBaseDir() + "/soundboard.json");
+}
+
+QString cacheDir() {
+    QString d = QDir::toNativeSeparators(pluginsBaseDir() + "/soundboard_cache");
+    QDir().mkpath(d);
+    return d;
 }
 
 // Lighter / darker variant of a color for hover/border accents.
@@ -135,10 +147,31 @@ QPushButton* makeTile(SoundSlot* slotPtr, QWidget* gridHost,
                 if (slotPtr->decoded && slotPtr->decoded->ok) engine->play(slotPtr->decoded, slotPtr->volume);
             } else if (picked == aBrowse) {
                 QString file = QFileDialog::getOpenFileName(
-                    tile, "Select sound file", QString(),
-                    "WAV files (*.wav);;All files (*.*)");
+                    tile, "Select audio file (any format)", QString(),
+                    "Audio (*.wav *.mp3 *.m4a *.aac *.flac *.wma *.ogg);;All (*.*)");
                 if (file.isEmpty()) return;
-                slotPtr->filePath = file.toStdString();
+
+                // Convert to canonical 48kHz/16-bit/mono WAV in cache dir.
+                // ts3client_playWaveFile and our mixer both expect WAV.
+                QString cachePath = QDir::toNativeSeparators(
+                    cacheDir() + QString("/slot_%1.wav").arg(slotPtr->id));
+                std::string err;
+                tile->setEnabled(false);
+                tile->setText("Converting...");
+                QApplication::processEvents();
+                bool ok = audio_converter::convertToCanonicalWav(
+                    file.toStdString(), cachePath.toStdString(), err);
+                tile->setEnabled(true);
+                if (!ok) {
+                    QMessageBox::warning(tile, "SoundBoard",
+                        QString("Failed to import '%1':\n\n%2\n\n"
+                                "Try a different file or convert to 16-bit WAV manually.")
+                            .arg(QFileInfo(file).fileName())
+                            .arg(QString::fromStdString(err)));
+                    refreshLabel();
+                    return;
+                }
+                slotPtr->filePath = cachePath.toStdString();
                 slotPtr->decoded.reset();
                 soundboard_dialog::saveSlots(*slotsVec);
                 refreshLabel();
