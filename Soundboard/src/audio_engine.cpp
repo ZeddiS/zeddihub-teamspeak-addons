@@ -233,16 +233,10 @@ bool AudioEngine::mixIntoCapture(short* samples, int sampleCount, int channels) 
     if (active_.empty()) return false;
 
     const float master = masterVolume_.load();
-    // Boost factor ensures the mixed sound dominates the user's mic
-    // signal so TS3 (and any auto-gain on listener side) treats it as
-    // primary voice. Without this, quiet WAVs may not transmit clearly.
-    constexpr float kMixBoost = 2.0f;
+    constexpr float kMixBoost = 4.0f;
+    // PRNG state for VAD-trigger noise burst.
+    static unsigned int rng = 0x12345u;
 
-    // Iterate per FRAME (not per sample). For each frame:
-    //   1. Sum mono soundboard samples from all active sessions
-    //   2. Broadcast that mono mix to all output channels (mono+sound,
-    //      stereo: same sound on L+R, etc.)
-    // Position advances once per frame regardless of channels.
     for (int frame = 0; frame < sampleCount; ++frame) {
         int monoMix = 0;
         for (auto& s : active_) {
@@ -250,6 +244,22 @@ bool AudioEngine::mixIntoCapture(short* samples, int sampleCount, int channels) 
             short sb = s.buffer->samples[s.position];
             monoMix += (int)((float)sb * s.volume * master * kMixBoost);
             s.position++;
+
+            // VAD-trigger burst at sound start: ~50ms of moderate
+            // broadband noise mixed in. Triggers TS3's VAD reliably
+            // even when user is silent. Hangover keeps VAD active for
+            // the rest of the sound.
+            if (s.triggerSamplesLeft > 0) {
+                rng = rng * 1664525u + 1013904223u;
+                int noise = (int)((rng >> 16) & 0x7fff) - 16383;  // -16k..+16k
+                // Fade in/out of trigger to avoid click
+                float fade = 1.0f;
+                if (s.triggerSamplesLeft < 480) {
+                    fade = s.triggerSamplesLeft / 480.0f;  // last 10ms fade out
+                }
+                monoMix += (int)((float)noise * fade);
+                s.triggerSamplesLeft--;
+            }
         }
 
         for (int ch = 0; ch < channels; ++ch) {

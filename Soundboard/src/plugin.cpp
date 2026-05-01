@@ -49,14 +49,10 @@ char* g_pluginID = nullptr;
 std::unique_ptr<AudioEngine> g_engine;
 std::vector<SoundSlot> g_slots;
 
-// VAD threshold bypass state. When sounds queue we lower TS3's
-// "voiceactivation_level" to a very permissive value (-50 dB) so the
-// mix triggers VAD detection. Setting "vad" itself to false would put
-// TS3 into PTT mode (worse than VAD), so we keep VAD enabled and just
-// crush the threshold.
-std::string g_savedVadLevel;
-bool g_vadOverridden = false;
-uint64 g_vadSchid = 0;
+// (v1.2.3 attempted to lower VAD threshold via setPreProcessorConfigValue.
+// Removed in v1.2.4 -- runtime preprocessor changes reset capture state
+// and dropped the talk indicator. Now we trigger VAD by injecting a brief
+// noise burst at the start of each sound instead, see audio_engine.)
 
 constexpr int kMaxHotkeySlots = 32;
 
@@ -92,47 +88,9 @@ uint64 currentSchid() {
     return ts3Functions.getCurrentServerConnectionHandlerID();
 }
 
-// Lower VAD threshold so any audio (incl. soundboard mix) triggers
-// transmission. KEEP VAD enabled -- disabling it puts TS3 into PTT mode
-// where transmission requires a key press.
-void overrideVadOff(uint64 schid) {
-    if (g_vadOverridden) return;
-    if (schid == 0) return;
-    if (!ts3Functions.getPreProcessorConfigValue || !ts3Functions.setPreProcessorConfigValue) return;
-
-    char* cur = nullptr;
-    if (ts3Functions.getPreProcessorConfigValue(schid, "voiceactivation_level", &cur) == ERROR_ok && cur) {
-        g_savedVadLevel = cur;
-        ts3Functions.freeMemory(cur);
-    } else {
-        g_savedVadLevel = "-25";  // TS3 default
-    }
-    // -50 dB threshold = essentially "any signal counts as voice"
-    ts3Functions.setPreProcessorConfigValue(schid, "voiceactivation_level", "-50");
-    g_vadOverridden = true;
-    g_vadSchid = schid;
-    char buf[200];
-    std::snprintf(buf, sizeof(buf),
-        "[SoundBoard] VAD threshold lowered (was '%s' dB, now '-50' dB) "
-        "to make sure soundboard mix triggers voice detection.",
-        g_savedVadLevel.c_str());
-    logMsg(buf);
-}
-
-void restoreVad() {
-    if (!g_vadOverridden) return;
-    if (g_vadSchid != 0 && ts3Functions.setPreProcessorConfigValue) {
-        ts3Functions.setPreProcessorConfigValue(g_vadSchid, "voiceactivation_level",
-                                                  g_savedVadLevel.c_str());
-        char buf[120];
-        std::snprintf(buf, sizeof(buf),
-            "[SoundBoard] VAD threshold restored to '%s' dB.", g_savedVadLevel.c_str());
-        logMsg(buf);
-    }
-    g_vadOverridden = false;
-    g_vadSchid = 0;
-    g_savedVadLevel.clear();
-}
+// Stub helpers retained for ABI; v1.2.4 no longer touches preprocessor.
+void overrideVadOff(uint64) {}
+void restoreVad() {}
 
 void playSlot(int id) {
     if (!g_engine) return;
@@ -156,12 +114,10 @@ void playSlot(int id) {
             return;
         }
 
-        // 1. Queue for mic-stream mix (others in channel hear it)
+        // 1. Queue for mic-stream mix (others in channel hear it).
+        // The first ~50ms of mix contains a noise burst that triggers
+        // TS3's VAD; hangover keeps transmission alive for the rest.
         g_engine->play(s.decoded, s.volume);
-
-        // 1b. Disable VAD so the mix is transmitted no matter how quiet the
-        //     user's actual mic is. Restored when active queue empties.
-        overrideVadOff(currentSchid());
 
         // 2. Local monitor playback. Try TS3 first (mixes with TS3 audio
         //    output device), fall back to Win32 PlaySound (default Windows
@@ -205,7 +161,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.3"; }
+const char* ts3plugin_version() { return "1.2.4"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -250,7 +206,6 @@ int ts3plugin_init() {
 __declspec(dllexport)
 #endif
 void ts3plugin_shutdown() {
-    restoreVad();
     if (g_engine) {
         g_engine->stopAll();
         g_engine.reset();
@@ -427,11 +382,7 @@ void ts3plugin_onEditCapturedVoiceDataEvent(uint64 schid,
         logMsg(buf);
     }
     if (!g_engine || !samples || sampleCount <= 0) return;
-    if (!g_engine->hasActive()) {
-        // No more sounds queued: restore VAD if we previously bypassed it
-        if (g_vadOverridden) restoreVad();
-        return;
-    }
+    if (!g_engine->hasActive()) return;
 
     bool modified = g_engine->mixIntoCapture(samples, sampleCount, channels);
     if (modified && edited) {

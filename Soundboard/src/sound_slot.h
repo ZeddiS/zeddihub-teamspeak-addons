@@ -27,4 +27,9 @@ struct PlaybackSession {
     std::shared_ptr<DecodedSound> buffer;
     std::size_t position = 0;
     float volume = 1.0f;
+    // VAD-trigger burst: at the start of each sound we briefly inject
+    // moderate noise into the mic stream so TS3's VAD detects it as
+    // voice. Once VAD's "hangover" kicks in, the actual soundboard
+    // sample carries the rest of transmission.
+    int triggerSamplesLeft = 2400;  // ~50ms at 48 kHz
 };
