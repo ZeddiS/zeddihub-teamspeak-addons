@@ -49,6 +49,13 @@ char* g_pluginID = nullptr;
 std::unique_ptr<AudioEngine> g_engine;
 std::vector<SoundSlot> g_slots;
 
+// VAD bypass state — when sounds are queued we disable TS3's voice
+// activation so the mix is unconditionally transmitted. Saved value is
+// restored once playback finishes (or plugin unloads).
+std::string g_savedVad;
+bool g_vadOverridden = false;
+uint64 g_vadSchid = 0;
+
 constexpr int kMaxHotkeySlots = 32;
 
 enum MenuID : int {
@@ -83,6 +90,43 @@ uint64 currentSchid() {
     return ts3Functions.getCurrentServerConnectionHandlerID();
 }
 
+// Disable TS3 voice activation detection so the mic mix is transmitted
+// unconditionally. Saves current VAD state to restore later.
+void overrideVadOff(uint64 schid) {
+    if (g_vadOverridden) return;
+    if (schid == 0) return;
+    if (!ts3Functions.getPreProcessorConfigValue || !ts3Functions.setPreProcessorConfigValue) return;
+    char* cur = nullptr;
+    if (ts3Functions.getPreProcessorConfigValue(schid, "vad", &cur) == ERROR_ok && cur) {
+        g_savedVad = cur;
+        ts3Functions.freeMemory(cur);
+    } else {
+        g_savedVad = "true";  // sane default to restore later
+    }
+    ts3Functions.setPreProcessorConfigValue(schid, "vad", "false");
+    g_vadOverridden = true;
+    g_vadSchid = schid;
+    char buf[160];
+    std::snprintf(buf, sizeof(buf),
+        "[SoundBoard] VAD temporarily disabled (was '%s') to ensure transmission of mixed audio.",
+        g_savedVad.c_str());
+    logMsg(buf);
+}
+
+void restoreVad() {
+    if (!g_vadOverridden) return;
+    if (g_vadSchid != 0 && ts3Functions.setPreProcessorConfigValue) {
+        ts3Functions.setPreProcessorConfigValue(g_vadSchid, "vad", g_savedVad.c_str());
+        char buf[120];
+        std::snprintf(buf, sizeof(buf),
+            "[SoundBoard] VAD restored to '%s'.", g_savedVad.c_str());
+        logMsg(buf);
+    }
+    g_vadOverridden = false;
+    g_vadSchid = 0;
+    g_savedVad.clear();
+}
+
 void playSlot(int id) {
     if (!g_engine) return;
     for (auto& s : g_slots) {
@@ -107,6 +151,10 @@ void playSlot(int id) {
 
         // 1. Queue for mic-stream mix (others in channel hear it)
         g_engine->play(s.decoded, s.volume);
+
+        // 1b. Disable VAD so the mix is transmitted no matter how quiet the
+        //     user's actual mic is. Restored when active queue empties.
+        overrideVadOff(currentSchid());
 
         // 2. Local monitor playback. Try TS3 first (mixes with TS3 audio
         //    output device), fall back to Win32 PlaySound (default Windows
@@ -150,7 +198,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.1"; }
+const char* ts3plugin_version() { return "1.2.2"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -195,6 +243,7 @@ int ts3plugin_init() {
 __declspec(dllexport)
 #endif
 void ts3plugin_shutdown() {
+    restoreVad();
     if (g_engine) {
         g_engine->stopAll();
         g_engine.reset();
@@ -371,7 +420,11 @@ void ts3plugin_onEditCapturedVoiceDataEvent(uint64 schid,
         logMsg(buf);
     }
     if (!g_engine || !samples || sampleCount <= 0) return;
-    if (!g_engine->hasActive()) return;
+    if (!g_engine->hasActive()) {
+        // No more sounds queued: restore VAD if we previously bypassed it
+        if (g_vadOverridden) restoreVad();
+        return;
+    }
 
     bool modified = g_engine->mixIntoCapture(samples, sampleCount, channels);
     if (modified && edited) {

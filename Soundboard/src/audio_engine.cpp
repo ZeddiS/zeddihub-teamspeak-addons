@@ -233,6 +233,10 @@ bool AudioEngine::mixIntoCapture(short* samples, int sampleCount, int channels) 
     if (active_.empty()) return false;
 
     const float master = masterVolume_.load();
+    // Boost factor ensures the mixed sound dominates the user's mic
+    // signal so TS3 (and any auto-gain on listener side) treats it as
+    // primary voice. Without this, quiet WAVs may not transmit clearly.
+    constexpr float kMixBoost = 2.0f;
 
     // Iterate per FRAME (not per sample). For each frame:
     //   1. Sum mono soundboard samples from all active sessions
@@ -244,7 +248,7 @@ bool AudioEngine::mixIntoCapture(short* samples, int sampleCount, int channels) 
         for (auto& s : active_) {
             if (s.position >= s.buffer->samples.size()) continue;
             short sb = s.buffer->samples[s.position];
-            monoMix += (int)((float)sb * s.volume * master);
+            monoMix += (int)((float)sb * s.volume * master * kMixBoost);
             s.position++;
         }
 
