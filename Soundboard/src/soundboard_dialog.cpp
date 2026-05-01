@@ -46,6 +46,11 @@ QString cacheDir() {
     return d;
 }
 
+// Static callback pointer set by soundboard_dialog::open() before showing
+// the dialog. Tile Play handlers invoke this so plugin can perform BOTH
+// mic mix AND local monitor playback (delegating to plugin.cpp's playSlot).
+static soundboard_dialog::PlayCallback s_playCb = nullptr;
+
 // Lighter / darker variant of a color for hover/border accents.
 QString lightenColor(const QString& hex, int delta) {
     QColor c(hex);
@@ -111,21 +116,17 @@ QPushButton* makeTile(SoundSlot* slotPtr, QWidget* gridHost,
     };
     refreshLabel();
 
-    // Left click -> play
-    QObject::connect(tile, &QPushButton::clicked, [slotPtr, engine, tile]() {
+    // Left click -> delegate to plugin's playSlot so it does BOTH
+    // mic-stream mix AND local monitor playback.
+    QObject::connect(tile, &QPushButton::clicked, [slotPtr, tile]() {
         if (slotPtr->filePath.empty()) {
             tile->setToolTip("Right-click -> Browse to select a sound file.");
             return;
         }
-        if (!slotPtr->decoded) {
-            slotPtr->decoded = engine->loadFile(slotPtr->filePath);
+        if (s_playCb) {
+            s_playCb(slotPtr->id);
+            tile->setToolTip(QString("Triggered slot %1.").arg(slotPtr->id));
         }
-        if (!slotPtr->decoded || !slotPtr->decoded->ok) {
-            tile->setToolTip("Failed to decode file. Use 16/24/32-bit PCM or 32-bit float WAV.");
-            return;
-        }
-        engine->play(slotPtr->decoded, slotPtr->volume);
-        tile->setToolTip(QString("Playing... (loaded %1 samples)").arg(slotPtr->decoded->samples.size()));
     });
 
     // Right-click context menu
@@ -143,8 +144,7 @@ QPushButton* makeTile(SoundSlot* slotPtr, QWidget* gridHost,
 
             if (picked == aPlay) {
                 if (slotPtr->filePath.empty()) return;
-                if (!slotPtr->decoded) slotPtr->decoded = engine->loadFile(slotPtr->filePath);
-                if (slotPtr->decoded && slotPtr->decoded->ok) engine->play(slotPtr->decoded, slotPtr->volume);
+                if (s_playCb) s_playCb(slotPtr->id);
             } else if (picked == aBrowse) {
                 QString file = QFileDialog::getOpenFileName(
                     tile, "Select audio file (any format)", QString(),
@@ -299,7 +299,8 @@ void saveSlots(const std::vector<SoundSlot>& slotsIn) {
     }
 }
 
-void open(std::vector<SoundSlot>& slotsIn, AudioEngine& engine) {
+void open(std::vector<SoundSlot>& slotsIn, AudioEngine& engine, PlayCallback playCb) {
+    s_playCb = playCb;
     QDialog dlg;
     dlg.setWindowTitle(QStringLiteral("SoundBoard"));
     dlg.setMinimumSize(900, 560);

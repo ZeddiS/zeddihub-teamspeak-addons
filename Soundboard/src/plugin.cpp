@@ -13,6 +13,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 #endif
 
 #include "teamspeak/public_definitions.h"
@@ -106,22 +108,31 @@ void playSlot(int id) {
         // 1. Queue for mic-stream mix (others in channel hear it)
         g_engine->play(s.decoded, s.volume);
 
-        // 2. Local monitor playback via TS3 native API. User hears the
-        //    sound through their default playback device too (they would
-        //    otherwise hear nothing because TS3 doesn't loop mic locally).
+        // 2. Local monitor playback. Try TS3 first (mixes with TS3 audio
+        //    output device), fall back to Win32 PlaySound (default Windows
+        //    playback device). Win32 fallback works even when offline.
+        bool localOk = false;
+#ifdef _WIN32
+        unsigned int ts3err = ERROR_ok;
         if (ts3Functions.playWaveFile && currentSchid() != 0) {
-            unsigned int err = ts3Functions.playWaveFile(currentSchid(), s.filePath.c_str());
-            if (err != ERROR_ok) {
-                std::snprintf(buf, sizeof(buf),
-                    "[SoundBoard] Local playback failed (err=%u) - others still hear it via mic mix.", err);
-                logMsg(buf, LogLevel_WARNING);
-            }
+            ts3err = ts3Functions.playWaveFile(currentSchid(), s.filePath.c_str());
+            if (ts3err == ERROR_ok) localOk = true;
         }
+        if (!localOk) {
+            // Fallback: Win32 PlaySound (async, default playback device).
+            // Each call replaces previous SoundBoard playback (single-stream).
+            BOOL sndOk = PlaySoundA(s.filePath.c_str(), NULL,
+                                    SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+            if (sndOk) localOk = true;
+        }
+#endif
 
         std::snprintf(buf, sizeof(buf),
-            "[SoundBoard] Playing slot %d (%zu samples, ~%.1fs).",
+            "[SoundBoard] Playing slot %d (%zu samples, ~%.1fs). "
+            "Local monitor: %s.",
             id, s.decoded->samples.size(),
-            (double)s.decoded->samples.size() / 48000.0);
+            (double)s.decoded->samples.size() / 48000.0,
+            localOk ? "OK" : "FAILED (file path issue?)");
         logMsg(buf);
         return;
     }
@@ -139,7 +150,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.0"; }
+const char* ts3plugin_version() { return "1.2.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -226,7 +237,7 @@ __declspec(dllexport)
 int ts3plugin_processCommand(uint64 schid, const char* command) {
     if (!command || !g_engine) return 1;
     if (std::strcmp(command, "open") == 0) {
-        soundboard_dialog::open(g_slots, *g_engine);
+        soundboard_dialog::open(g_slots, *g_engine, &playSlot);
         return 0;
     }
     if (std::strcmp(command, "stop") == 0) {
@@ -276,7 +287,7 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
 
     switch (menuItemID) {
         case MENU_ID_OPEN:
-            soundboard_dialog::open(g_slots, *g_engine);
+            soundboard_dialog::open(g_slots, *g_engine, &playSlot);
             break;
         case MENU_ID_STOP_ALL:
             g_engine->stopAll();
@@ -334,7 +345,7 @@ void ts3plugin_onHotkeyEvent(const char* keyword) {
         return;
     }
     if (std::strcmp(keyword, "soundboard_open") == 0) {
-        soundboard_dialog::open(g_slots, *g_engine);
+        soundboard_dialog::open(g_slots, *g_engine, &playSlot);
         return;
     }
 }
