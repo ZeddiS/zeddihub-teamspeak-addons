@@ -19,9 +19,9 @@ inline std::vector<std::string> chunk(const std::string& s, std::size_t n = 100)
     return out;
 }
 
-inline PokeJob wakeupCz(uint64 schid, anyID clientID) {
+inline PokeJob cz(uint64 schid, anyID clientID) {
     PokeJob j;
-    j.label = "Wake-up CZ";
+    j.label = "CZ";
     j.schid = schid;
     j.clientID = clientID;
     j.mode = PokeMode::Burst;
@@ -30,33 +30,15 @@ inline PokeJob wakeupCz(uint64 schid, anyID clientID) {
         "VSTAVEJ!",
         "POZOR!",
         "HALO HALO",
-        "WAKE UP!",
         "PROBUD SE",
         "SLYSIS ME?",
-        "TADY ZEDDIHUB",
         "OZVI SE",
-        "TUK TUK TUK"
+        "TUK TUK TUK",
+        "TADY ZEDDIHUB",
+        "POJD SEM"
     };
     j.count = 20;
     j.burstDelayMs = 250;
-    return j;
-}
-
-inline PokeJob halt(uint64 schid, anyID clientID) {
-    PokeJob j;
-    j.label = "Halt!";
-    j.schid = schid;
-    j.clientID = clientID;
-    j.mode = PokeMode::Schedule;
-    j.messages = {
-        "!!! HALT !!!",
-        "STOP & READ",
-        "DULEZITE - PRECTI",
-        "POZOR PROSIM"
-    };
-    j.count = 10;
-    j.intervalMinMs = 3000;
-    j.intervalMaxMs = 6000;
     return j;
 }
 
@@ -106,7 +88,7 @@ inline PokeJob silent(uint64 schid, anyID clientID) {
 // servers where you have permission.
 inline PokeJob maxSpam(uint64 schid, anyID clientID) {
     PokeJob j;
-    j.label = "MAX SPAM";
+    j.label = "MAX";
     j.schid = schid;
     j.clientID = clientID;
     j.mode = PokeMode::Burst;

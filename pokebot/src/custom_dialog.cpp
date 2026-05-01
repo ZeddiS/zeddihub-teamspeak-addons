@@ -169,7 +169,7 @@ void run(uint64 schid, anyID clientID, PokeEngine& engine) {
     QDialog dlg;
     dlg.setWindowTitle(QStringLiteral("Poke Bot - Custom"));
     dlg.setMinimumWidth(500);
-    dlg.setStyleSheet(QString::fromUtf8(kStyleSheet));
+    // No custom stylesheet - inherit TS3 client's native theme
 
     auto* layout = new QVBoxLayout(&dlg);
     layout->setSpacing(12);

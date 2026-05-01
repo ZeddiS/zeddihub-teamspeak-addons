@@ -80,7 +80,7 @@ Result runMoveSpamDialog(uint64 currentChannel) {
     QDialog dlg;
     dlg.setWindowTitle(QStringLiteral("MoveSpam — Custom"));
     dlg.setMinimumWidth(440);
-    dlg.setStyleSheet(QString::fromUtf8(kStyleSheet));
+    // No custom stylesheet - inherit TS3 client's native theme
 
     auto* layout = new QVBoxLayout(&dlg);
     auto* form = new QFormLayout();

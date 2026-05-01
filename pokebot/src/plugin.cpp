@@ -48,8 +48,7 @@ char* g_pluginID = nullptr;
 std::unique_ptr<PokeEngine> g_engine;
 
 enum MenuID : int {
-    MENU_ID_WAKEUP_CZ = 1,
-    MENU_ID_HALT,
+    MENU_ID_CZ = 1,
     MENU_ID_SYMBOL_STORM,
     MENU_ID_SILENT,
     MENU_ID_MAX_SPAM,
@@ -66,11 +65,10 @@ struct MenuSpec {
 };
 
 constexpr MenuSpec kMenuSpecs[] = {
-    { MENU_ID_WAKEUP_CZ,    "Poke Bot: Wake-up CZ" },
-    { MENU_ID_HALT,         "Poke Bot: Halt! (interval)" },
+    { MENU_ID_CZ,           "Poke Bot: CZ" },
     { MENU_ID_SYMBOL_STORM, "Poke Bot: Symbol Storm" },
-    { MENU_ID_SILENT,       "Poke Bot: Silent poke" },
-    { MENU_ID_MAX_SPAM,     "Poke Bot: MAX SPAM" },
+    { MENU_ID_SILENT,       "Poke Bot: Silent" },
+    { MENU_ID_MAX_SPAM,     "Poke Bot: MAX" },
     { MENU_ID_CUSTOM,       "Poke Bot: Custom..." },
     { MENU_ID_STOP,         "Poke Bot: STOP" },
 };
@@ -111,7 +109,7 @@ const char* ts3plugin_name() {
 __declspec(dllexport)
 #endif
 const char* ts3plugin_version() {
-    return "1.0.0";
+    return "1.3.0";
 }
 
 #ifdef _WIN32
@@ -308,11 +306,8 @@ void ts3plugin_onMenuItemEvent(uint64 schid,
     };
 
     switch (menuItemID) {
-        case MENU_ID_WAKEUP_CZ:
-            runJob(presets::wakeupCz(schid, clientID));
-            break;
-        case MENU_ID_HALT:
-            runJob(presets::halt(schid, clientID));
+        case MENU_ID_CZ:
+            runJob(presets::cz(schid, clientID));
             break;
         case MENU_ID_SYMBOL_STORM:
             runJob(presets::symbolStorm(schid, clientID));

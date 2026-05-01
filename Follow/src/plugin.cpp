@@ -166,7 +166,7 @@ const char* ts3plugin_name() { return "Follow"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.1"; }
+const char* ts3plugin_version() { return "1.3.0"; }
 
 #ifdef _WIN32
 __declspec(dllexport)

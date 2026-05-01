@@ -1,113 +1,118 @@
 # ZeddiHub TeamSpeak Addons
 
-Kolekce TeamSpeak 3 plug-inů od ZeddiHub. **Každý addon má svůj GitHub repo** s vlastním
-README, CHANGELOG a releases. Tento repo je **index / collection / build infrastructure**.
+Curated TeamSpeak 3 plugin collection by ZeddiHub. **Each plugin lives in
+its own GitHub repo** with releases, README, and CHANGELOG. This repo is
+the **build infrastructure** and collection index.
 
 [**ZeddiHub.eu**](https://zeddihub.eu) · [**ZeddiHub Tools**](https://zeddihub.eu/tools/) · [**zeddis.xyz**](https://zeddis.xyz) · © 2026 ZeddiHub.eu
 
 ---
 
-## Plugins
+## Plugins (4)
 
-| Plugin | Kategorie | Repo | Latest |
-|---|---|---|---|
-| **Poke Bot** | 😈 prank | [zeddihub-teamspeak-pokebot](https://github.com/ZeddiS/zeddihub-teamspeak-pokebot) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-pokebot?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-pokebot/releases/latest) |
-| **Follow** | 🔧 utility | [zeddihub-teamspeak-follow](https://github.com/ZeddiS/zeddihub-teamspeak-follow) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-follow?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-follow/releases/latest) |
-| **MoveSpam** | 😈 prank | [zeddihub-teamspeak-movespam](https://github.com/ZeddiS/zeddihub-teamspeak-movespam) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-movespam?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-movespam/releases/latest) |
-| **Voice Changer** | 🎭 fun | [zeddihub-teamspeak-voicechanger](https://github.com/ZeddiS/zeddihub-teamspeak-voicechanger) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-voicechanger?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-voicechanger/releases/latest) |
-| **AutoReconnect** | 🔧 utility | [zeddihub-teamspeak-autoreconnect](https://github.com/ZeddiS/zeddihub-teamspeak-autoreconnect) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-autoreconnect?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-autoreconnect/releases/latest) |
-| **Greeting Bot** | 😈 prank | [zeddihub-teamspeak-greetingbot](https://github.com/ZeddiS/zeddihub-teamspeak-greetingbot) | [![](https://img.shields.io/github/v/release/ZeddiS/zeddihub-teamspeak-greetingbot?label=release)](https://github.com/ZeddiS/zeddihub-teamspeak-greetingbot/releases/latest) |
+| Plugin | What it does | Repo |
+|---|---|---|
+| **Poke Bot** | Right-click client → preset (CZ, Symbol Storm, Silent, MAX) or custom poke campaign | [zeddihub-teamspeak-pokebot](https://github.com/ZeddiS/zeddihub-teamspeak-pokebot) |
+| **Follow** | Auto-follow another client (polling, never auto-stops) | [zeddihub-teamspeak-follow](https://github.com/ZeddiS/zeddihub-teamspeak-follow) |
+| **MoveSpam** | Repeatedly move target between two channels | [zeddihub-teamspeak-movespam](https://github.com/ZeddiS/zeddihub-teamspeak-movespam) |
+| **Soundboard** | Play .wav files into your microphone with hotkeys | [zeddihub-teamspeak-soundboard](https://github.com/ZeddiS/zeddihub-teamspeak-soundboard) |
 
-## Stažení & instalace
+## Installation
 
-Otevři repo libovolného pluginu výše a v jeho **Releases**:
+Open the repo of any plugin above and grab the latest release.
 
-### A) Installer (.exe) — doporučené
-Stáhni **`<plugin>-Setup-vX.Y.Z.exe`** a spusť. Wizard automaticky detekuje TS3 verzi, nabídne zavření TS3 a nainstaluje správnou DLL do `%APPDATA%\TS3Client\plugins\`.
-
-### B) Raw DLL (manuální)
-Stáhni přímo .dll soubor podle své TS3 verze:
+### Recommended: TS3 native install (.ts3_plugin)
+Download the file matching your TS3 version, double-click it, and TS3
+opens its native install dialog. Click **Yes** to install.
 
 | TS3 client | API | File |
 |---|---|---|
-| 3.5.0 | 23 | `<plugin>_api23_win64.dll` |
-| 3.5.1 - 3.5.5 | 24 | `<plugin>_api24_win64.dll` |
-| **3.5.6** ⭐ | **25** | `<plugin>_api25_win64.dll` |
-| 3.6.x+ | 26 | `<plugin>_api26_win64.dll` |
+| 3.5.0 | 23 | `*-TS3-3.5.0-api23.ts3_plugin` |
+| 3.5.1 - 3.5.5 | 24 | `*-TS3-3.5.1-3.5.5-api24.ts3_plugin` |
+| **3.5.6** ⭐ | **25** | `*-TS3-3.5.6-api25.ts3_plugin` |
+| 3.6.x and newer | 26 | `*-TS3-3.6+-api26.ts3_plugin` |
 
-Zkopíruj do `%APPDATA%\TS3Client\plugins\`. V TS3 → Settings → Plugins → Reload All → zaškrtni Enabled.
+### Manual: raw .dll
+Download the matching `<plugin>_apiNN_win64.dll` and copy to
+`%APPDATA%\TS3Client\plugins\`. Then in TS3 → Settings → Plugins → Reload All → tick Enabled.
 
-## Repo struktura
+## Theme
 
-```
-zeddihub-teamspeak-addons/   ← TENTO repo, build infrastructure + collection index
-├── pokebot/                 ← lokální zdroj (per-plugin repos jsou srcd z toho)
-├── Follow/
-├── MoveSpam/
-├── VoiceChanger/
-├── AutoReconnect/
-├── GreetingBot/
-├── common/zh_brand.h        ← author/copyright sdílený header
-├── installer/template.iss   ← Inno Setup šablona
-├── build_all.ps1            ← build 24 DLLs (6 plugins × 4 APIs)
-├── package_zips.ps1         ← package release zips
-├── build_installers.ps1     ← Inno Setup -> .exe per plugin
-├── refresh_per_plugin_repos.ps1  ← sync čistého obsahu do per-plugin repos
-└── PLUGIN_IDEAS.md          ← backlog dalších pluginů
-```
+All plugin dialogs use **TS3 client's native theme**. Whatever skin you
+have configured in TS3 (default, dark, custom) is what the plugin
+windows will look like — no Discord-style overrides.
 
-## Build infrastruktura
+## Build infrastructure
 
 ```powershell
-# Setup (jednorázově)
+# Setup (one-time)
 py -m pip install aqtinstall
 py -m aqt install-qt windows desktop 5.12.12 win64_msvc2017_64 -O C:\Qt --archives qtbase
 git clone https://github.com/TeamSpeak-Systems/ts3client-pluginsdk.git ts3sdk_clone
 Move-Item ts3sdk_clone/include ts3sdk/include
-winget install JRSoftware.InnoSetup
 
-# Plný release pipeline
-.\build_all.ps1                  # 24 DLLs do dist/
-.\package_zips.ps1               # 28 zipů do release/
-.\build_installers.ps1           # 6 installerů .exe do installer/output/
-.\refresh_per_plugin_repos.ps1   # push čistého obsahu do per-plugin repos
+# Full release pipeline
+.\build_all.ps1                     # 16 DLLs (4 plugins x 4 APIs) -> dist/
+.\package_ts3_plugins.ps1           # 16 .ts3_plugin packages -> ts3_plugins/
+.\refresh_per_plugin_repos.ps1      # push minimal trees to per-plugin repos
+.\reorganize_releases.ps1           # create per-plugin GH releases
 ```
 
-### Závislosti
+### Tooling
 
-| Tool | Verze | Účel |
+| Tool | Version | Why |
 |---|---|---|
-| Visual Studio 2022 BuildTools | C++ Desktop workload | Compiler + Windows SDK |
-| CMake | 3.16+ | Bundled ve VS BuildTools |
-| **Qt 5.12.12 MSVC 2017 64-bit** | LTS | TS3 ABI compat (TS3 3.5.6 má Qt 5.12.3) |
-| Inno Setup | 6.0+ | Build .exe installerů |
+| Visual Studio 2022 BuildTools | C++ Desktop workload | MSVC + Windows SDK |
+| CMake | 3.16+ | Bundled in VS BuildTools |
+| Qt 5.12.12 MSVC 2017 64-bit | LTS | TS3 3.5.6 ships Qt 5.12.3 -- ABI compat |
 | TS3 Plugin SDK | 3.3.0+ | https://github.com/TeamSpeak-Systems/ts3client-pluginsdk |
 
-> **Důležité:** Qt 5.12.12 (ne 5.15.x). Plugin built proti 5.15+ může selhat
-> při loadu do TS3 3.5.6 kvůli chybějícím symbolům (např. `QPushButton::hitButton`
-> přibyl až v Qt 5.13). 5.12 LTS je forward-compatible s novějšími TS3 verzemi.
+> **Important:** Qt 5.12 (not 5.15+). Plugin built against 5.13+ may fail
+> to load on TS3 3.5.6 due to missing symbols (e.g. `QPushButton::hitButton`
+> added in Qt 5.13). 5.12 LTS is forward-compatible with newer TS3 versions.
 
-## Plugin nápady (backlog)
+## Repo structure
 
-Viz [PLUGIN_IDEAS.md](PLUGIN_IDEAS.md). Top picks pro v1.2.0:
-- 🟢⭐ **Channel Notifier** — toast když přátelé připojí
-- 🟡⭐ **Recording Indicator** — varování když někdo nahrává
-- 🟢🔧 **Quick Channel Switcher** — hotkey jump
-- 🟢😈 **Mirror Bot** — echo target's chat zpět jen jemu
-- 🟡😈 **Random Mover Chaos** — MoveSpam s random destination
+```
+zeddihub-teamspeak-addons/
+├── pokebot/        ← Poke Bot source (builds zeddihub_pokebot_*.dll)
+├── Follow/         ← Follow source
+├── MoveSpam/       ← MoveSpam source
+├── Soundboard/     ← Soundboard source (with vendored audio decoder)
+├── common/zh_brand.h        ← Shared author/copyright header
+├── ts3sdk/                  ← TS3 plugin SDK (gitignored)
+├── build_all.ps1            ← Build 16 DLLs
+├── package_ts3_plugins.ps1  ← Wrap DLLs into .ts3_plugin packages
+├── refresh_per_plugin_repos.ps1  ← Sync README/CHANGELOG to per-plugin repos
+├── reorganize_releases.ps1  ← Recreate releases with .ts3_plugin + .dll assets
+└── PLUGIN_IDEAS.md          ← Backlog of future plugin ideas
+```
 
-## Etická poznámka
+## Deprecated repos (archived)
 
-PokeBot, MoveSpam, GreetingBot — **harassment tools**. Používej **jen kde
-máš oprávnění** a **se souhlasem** uživatelů. Na 99% public TS3 serverů ti
-za ně budou kickovat / banovat. Tvoje zodpovědnost.
+The following plugins were experiments that didn't make the final cut.
+Repos are archived (read-only) but still accessible:
 
-Follow, AutoReconnect, Voice Changer — užitečné pro běžné použití.
+- ~~zeddihub-teamspeak-voicechanger~~ (real-time DSP voice effects)
+- ~~zeddihub-teamspeak-autoreconnect~~ (auto-reconnect on disconnect)
+- ~~zeddihub-teamspeak-greetingbot~~ (auto-poke on channel join)
+
+## Plugin ideas backlog
+
+See [PLUGIN_IDEAS.md](PLUGIN_IDEAS.md) for proposed future plugins.
+
+## Ethical note
+
+Poke Bot, MoveSpam — **harassment tools**. Use only on servers where you
+have permission and target consents. Most public servers will kick/ban
+you for using them.
+
+Follow, Soundboard — useful for everyday TS3 use. Soundboard especially
+is a fun social tool when used responsibly.
 
 ## License
 
-MIT pro vlastní kód. Vendored knihovny mají vlastní licence:
-- `VoiceChanger/vendor/smb_pitch_shift.h` — public domain (Stephan M. Bernsee)
+MIT for own code. Vendored libraries have their own licenses.
 
 ---
 

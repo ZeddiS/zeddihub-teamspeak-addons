@@ -9,12 +9,10 @@ $root      = $PSScriptRoot
 if (-not $root) { $root = "C:\Users\12voj\Documents\zeddihub-teamspeak-addons" }
 
 $plugins = @(
-    @{ dir = "pokebot";       var = "POKEBOT_API_VERSION";       base = "zeddihub_pokebot" }
-    @{ dir = "Follow";        var = "FOLLOW_API_VERSION";        base = "follow"           }
-    @{ dir = "MoveSpam";      var = "MOVESPAM_API_VERSION";      base = "movespam"         }
-    @{ dir = "VoiceChanger";  var = "VC_API_VERSION";            base = "voicechanger"     }
-    @{ dir = "AutoReconnect"; var = "AUTORECONNECT_API_VERSION"; base = "autoreconnect"    }
-    @{ dir = "GreetingBot";   var = "GREETINGBOT_API_VERSION";   base = "greetingbot"      }
+    @{ dir = "pokebot";    var = "POKEBOT_API_VERSION";    base = "zeddihub_pokebot" }
+    @{ dir = "Follow";     var = "FOLLOW_API_VERSION";     base = "follow"           }
+    @{ dir = "MoveSpam";   var = "MOVESPAM_API_VERSION";   base = "movespam"         }
+    @{ dir = "Soundboard"; var = "SOUNDBOARD_API_VERSION"; base = "soundboard"       }
 )
 $apis = @(23, 24, 25, 26)
 

@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
-project(voicechanger LANGUAGES CXX)
+project(soundboard LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-set(VC_API_VERSION "26" CACHE STRING "TS3 plugin API version (23/24/25/26)")
+set(SOUNDBOARD_API_VERSION "26" CACHE STRING "TS3 plugin API version (23/24/25/26)")
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/../ts3sdk/include/plugin_definitions.h")
     set(_TS3_SDK_DEFAULT "${CMAKE_SOURCE_DIR}/../ts3sdk")
@@ -20,39 +20,37 @@ endif()
 
 find_package(Qt5 5.12 REQUIRED COMPONENTS Core Widgets)
 
-add_library(voicechanger SHARED
+add_library(soundboard SHARED
     src/plugin.cpp
-    src/voice_engine.cpp
-    src/settings_dialog.cpp
-    src/voice_engine.h
-    src/settings_dialog.h
-    vendor/smb_pitch_shift.h
+    src/audio_engine.cpp
+    src/audio_engine.h
+    src/sound_slot.h
+    src/soundboard_dialog.cpp
+    src/soundboard_dialog.h
 )
 
-target_include_directories(voicechanger PRIVATE
+target_include_directories(soundboard PRIVATE
     ${TS3_SDK_DIR}/include
     src
-    vendor
 )
 
-target_compile_definitions(voicechanger PRIVATE
-    PLUGIN_API_VERSION=${VC_API_VERSION}
-    _USE_MATH_DEFINES
+target_compile_definitions(soundboard PRIVATE
+    PLUGIN_API_VERSION=${SOUNDBOARD_API_VERSION}
 )
 
-target_link_libraries(voicechanger PRIVATE Qt5::Core Qt5::Widgets)
+target_link_libraries(soundboard PRIVATE Qt5::Core Qt5::Widgets)
 
 if(WIN32)
-    set_target_properties(voicechanger PROPERTIES
+    set_target_properties(soundboard PROPERTIES
         PREFIX ""
-        OUTPUT_NAME "voicechanger_api${VC_API_VERSION}_win64"
+        OUTPUT_NAME "soundboard_api${SOUNDBOARD_API_VERSION}_win64"
         SUFFIX ".dll"
     )
 endif()
 
 if(MSVC)
-    target_compile_options(voicechanger PRIVATE /utf-8 /W4)
-    target_compile_definitions(voicechanger PRIVATE
+    target_compile_options(soundboard PRIVATE /utf-8 /W4)
+    target_compile_definitions(soundboard PRIVATE
         _CRT_SECURE_NO_WARNINGS
         NOMINMAX
         WIN32_LEAN_AND_MEAN

@@ -1,8 +1,5 @@
-# Strip each per-plugin repo to MINIMUM content:
-#   - README.md (English)
-#   - LICENSE (MIT)
-#   - CHANGELOG.md (Keep a Changelog)
-# No source code, no CMakeLists, no build files. Source is in collection repo only.
+# Strip per-plugin repos to README + LICENSE + CHANGELOG only.
+# Reflects 4-plugin collection: PokeBot, Follow, MoveSpam, Soundboard.
 
 $ErrorActionPreference = "Continue"
 
@@ -15,149 +12,71 @@ if (Test-Path $workRoot) { Remove-Item -Recurse -Force $workRoot }
 New-Item -ItemType Directory -Force -Path $workRoot | Out-Null
 
 $plugins = @(
-    @{ src="pokebot";       repo="zeddihub-teamspeak-pokebot";       title="Poke Bot";       version="1.2.1"; clogKey="pokebot";       dllBase="zeddihub_pokebot" }
-    @{ src="Follow";        repo="zeddihub-teamspeak-follow";        title="Follow";         version="1.2.1"; clogKey="follow";        dllBase="follow"           }
-    @{ src="MoveSpam";      repo="zeddihub-teamspeak-movespam";      title="MoveSpam";       version="1.2.0"; clogKey="movespam";      dllBase="movespam"         }
-    @{ src="VoiceChanger";  repo="zeddihub-teamspeak-voicechanger";  title="Voice Changer";  version="1.2.4"; clogKey="voicechanger";  dllBase="voicechanger"     }
-    @{ src="AutoReconnect"; repo="zeddihub-teamspeak-autoreconnect"; title="AutoReconnect";  version="1.0.1"; clogKey="autoreconnect"; dllBase="autoreconnect"    }
-    @{ src="GreetingBot";   repo="zeddihub-teamspeak-greetingbot";   title="Greeting Bot";   version="1.0.1"; clogKey="greetingbot";   dllBase="greetingbot"      }
+    @{ src="pokebot";    repo="zeddihub-teamspeak-pokebot";    title="Poke Bot";    version="1.3.0"; clogKey="pokebot";    dllBase="zeddihub_pokebot" }
+    @{ src="Follow";     repo="zeddihub-teamspeak-follow";     title="Follow";      version="1.3.0"; clogKey="follow";     dllBase="follow"           }
+    @{ src="MoveSpam";   repo="zeddihub-teamspeak-movespam";   title="MoveSpam";    version="1.3.0"; clogKey="movespam";   dllBase="movespam"         }
+    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="Soundboard";  version="1.0.0"; clogKey="soundboard"; dllBase="soundboard"       }
 )
 
-# Description per plugin (English)
 $desc = @{
-    "pokebot" = @{ short = "Right-click any TeamSpeak 3 client to launch a poke campaign.";
-                   long = "Preset bursts (Wake-up, Halt, Symbol Storm, Silent, MAX SPAM) plus a custom Qt dialog with Burst/Schedule mode toggle, paired sliders for count and intervals, and a TS3 dark theme. Hard-cap of 500 pokes and 50ms anti-flood floor protect against server kicks."; }
-    "follow" = @{ short = "Auto-follow another TeamSpeak 3 client into channels.";
-                  long = "A polling worker thread checks the target's current channel every 1 second and moves you to match. The plugin NEVER auto-stops on errors -- only manual STOP or target unreachable for 10 seconds ends the follow. Robust against missed events and 'User is already in this channel' server responses."; }
-    "movespam" = @{ short = "Repeatedly move a TeamSpeak 3 client between two channels.";
-                    long = "Basic mode alternates the target between their current channel and the server's default channel. Custom mode opens a Qt dialog where you specify a destination channel (by name or ID), interval, and max move count."; }
-    "voicechanger" = @{ short = "Real-time DSP effects on outgoing microphone audio.";
-                        long = "Helium / Chipmunk / Demon / Deep / Custom pitch (phase-vocoder), Robot (AM modulation), Echo (delay), Distortion (raspy/guttural), Whisper (breathy), Telephone (300-3400 Hz bandpass), Underwater (muffled + reverb), Megaphone (PA-system distortion + bandpass), Volume Boost (sanity test). Each preset has a one-click menu item under Plugins -> Voice Changer."; }
-    "autoreconnect" = @{ short = "Auto-reconnect to TeamSpeak 3 server after unexpected disconnects.";
-                         long = "Captures connection parameters (host, port, nickname, identity) when you connect. On unexpected disconnect (network drop, server kick aside), automatically reconnects with exponential backoff (2s -> 4s -> 8s -> ... up to 64x base)."; }
-    "greetingbot" = @{ short = "Auto-poke users entering your TeamSpeak 3 channel with a custom greeting.";
-                       long = "Configurable greeting message (use {name} placeholder for personalization). Triggers when any client moves into your current channel. Toggle via Plugins -> Greeting Bot menu, or chat command /greet on|off|set <text>."; }
+    "pokebot" = @{ short="Right-click any TeamSpeak 3 client to launch a poke campaign.";
+                   long="Preset bursts (CZ, Symbol Storm, Silent, MAX) plus a custom dialog with Burst/Schedule mode toggle, paired sliders for count and intervals. Hard-cap of 500 pokes and 50ms anti-flood floor protect against server kicks. Native TS3 theme." }
+    "follow" = @{ short="Auto-follow another TeamSpeak 3 client into channels.";
+                  long="A polling worker checks the target's current channel every 1 second and moves you to match. The plugin NEVER auto-stops on errors -- only manual STOP or target unreachable for 10 seconds ends the follow." }
+    "movespam" = @{ short="Repeatedly move a TeamSpeak 3 client between two channels.";
+                    long="Basic mode alternates the target between their current channel and the server's default channel. Custom mode opens a dialog where you specify a destination channel (by name or ID), interval, and max move count." }
+    "soundboard" = @{ short="Play sound files into your TeamSpeak 3 microphone stream with hotkeys.";
+                      long="Open the soundboard window from Plugins menu, add slots, browse for .wav files. Each slot has a configurable hotkey (bind in TS3 Settings -> Hotkeys). When triggered, the sound is mixed into your outgoing voice stream so others hear it. Multiple sounds can play simultaneously." }
 }
 
 $changelogs = @{
     "pokebot" = @(
-        "## [1.2.1] - 2026-04-30",
+        "## [1.3.0] - 2026-05-01",
         "### Changed",
-        "- All UI text translated to English",
-        "- About URL points to dedicated zeddihub-teamspeak-pokebot repo",
+        "- Presets simplified: CZ, Symbol Storm, Silent, MAX, Custom, STOP",
+        "- Removed Wake-up CZ (renamed to CZ) and Halt (merged into CZ phrases)",
+        "- Removed custom stylesheet -- dialogs inherit TS3 client's native theme",
+        "- TS3 native install via .ts3_plugin packages (replaces .exe installer)",
         "",
-        "## [1.2.0] - 2026-04-30",
-        "### Added",
-        "- Qt 5.12 dark-theme custom dialog with Burst/Schedule mode toggle and synced sliders",
-        "- MAX SPAM preset (hard-cap 500 pokes, 50ms anti-flood floor)",
-        "- Plugins top-bar menu (Stop campaign / Status / About)",
-        "- Author: zeddis.xyz, Copyright (C) 2026 ZeddiHub.eu",
-        "- Multi-API support: 23 / 24 / 25 / 26",
-        "",
-        "## [1.0.1] - 2026-04-29",
-        "### Fixed",
-        "- Added ts3plugin_freeMemory + requestAutoload exports (previously menu items did not appear)",
-        "- Plugin renamed to 'Poke Bot'",
+        "## [1.2.x]",
+        "- See git history",
         "",
         "## [1.0.0] - 2026-04-29",
-        "### Added",
-        "- Initial release with 4 presets + Custom dialog"
+        "- Initial release"
     )
     "follow" = @(
-        "## [1.2.1] - 2026-04-30",
+        "## [1.3.0] - 2026-05-01",
         "### Changed",
-        "- All UI text translated to English",
-        "- About URL points to dedicated zeddihub-teamspeak-follow repo",
+        "- TS3 native install via .ts3_plugin packages",
+        "- Inherits TS3 client's native theme",
         "",
         "## [1.2.0] - 2026-04-30",
-        "### Changed",
-        "- Rewrite to polling worker (1s interval). Never auto-stops on errors -- only manual STOP or target gone for 10s+",
-        "",
-        "## [1.1.0] - 2026-04-30",
-        "### Added",
-        "- Plugins top-bar menu (Stop / Status / About)",
-        "- Author: zeddis.xyz, Copyright (C) 2026 ZeddiHub.eu",
-        "- Multi-API support: 23 / 24 / 25 / 26",
-        "### Fixed",
-        "- ERROR_channel_already_in is now treated as success",
+        "- Polling worker (1s) -- never auto-stops",
         "",
         "## [1.0.0] - 2026-04-30",
-        "### Added",
-        "- Initial release: single-target follow with auto-stop on permission errors"
+        "- Initial release"
     )
     "movespam" = @(
-        "## [1.2.0] - 2026-04-30",
+        "## [1.3.0] - 2026-05-01",
         "### Changed",
-        "- All UI text translated to English",
-        "- About URL points to dedicated zeddihub-teamspeak-movespam repo",
-        "",
-        "## [1.1.0] - 2026-04-30",
-        "### Added",
-        "- Plugins top-bar menu (Stop / Status / About)",
-        "- Author: zeddis.xyz, Copyright (C) 2026 ZeddiHub.eu",
-        "- Multi-API support: 23 / 24 / 25 / 26",
+        "- TS3 native install via .ts3_plugin packages",
+        "- Removed custom dialog stylesheet -- inherits TS3 native theme",
         "",
         "## [1.0.0] - 2026-04-30",
-        "### Added",
-        "- Initial release: Basic and Custom Qt dialog modes"
+        "- Initial release"
     )
-    "voicechanger" = @(
-        "## [1.2.4] - 2026-04-30",
-        "### Changed",
-        "- All UI text translated to English",
-        "- About URL points to dedicated zeddihub-teamspeak-voicechanger repo",
-        "",
-        "## [1.2.3] - 2026-04-30",
+    "soundboard" = @(
+        "## [1.0.0] - 2026-05-01",
         "### Added",
-        "- Per-preset menu items in Plugins top bar (one click = pick preset + enable)",
-        "- Compat Mode toggle for diagnosing VAD blocking",
-        "",
-        "## [1.2.2] - 2026-04-30",
-        "### Fixed",
-        "- Pre-allocate scratch buffers in constructor (avoid heap allocation on audio thread)",
-        "",
-        "## [1.2.1] - 2026-04-30",
-        "### Added",
-        "- VolumeBoost sanity-test preset",
-        "### Fixed",
-        "- NaN/Inf protection",
-        "- Robot uses AM instead of full ring mod",
-        "- Pitch shifter wraps gSumPhase to [-PI, PI]",
-        "",
-        "## [1.2.0] - 2026-04-30",
-        "### Added",
-        "- 5 new effects: Distortion, Whisper, Telephone, Underwater, Megaphone",
-        "### Fixed",
-        "- Off preset now guaranteed to never set edited=1",
-        "",
-        "## [1.0.0] - 2026-04-30",
-        "### Added",
-        "- Initial release: Helium / Chipmunk / Demon / Deep / Robot / Echo / Custom + phase-vocoder pitch shifter"
-    )
-    "autoreconnect" = @(
-        "## [1.0.1] - 2026-04-30",
-        "### Changed",
-        "- All UI text translated to English",
-        "- About URL points to dedicated zeddihub-teamspeak-autoreconnect repo",
-        "",
-        "## [1.0.0] - 2026-04-30",
-        "### Added",
-        "- Initial release: auto-reconnect with exponential backoff",
-        "- Captures connection params on connect, replays on reconnect",
-        "- Plugins top-bar menu: Toggle / Status / About"
-    )
-    "greetingbot" = @(
-        "## [1.0.1] - 2026-04-30",
-        "### Changed",
-        "- All UI text translated to English",
-        "- Default greeting changed to 'Welcome {name}! :)'",
-        "- About URL points to dedicated zeddihub-teamspeak-greetingbot repo",
-        "",
-        "## [1.0.0] - 2026-04-30",
-        "### Added",
-        "- Initial release: auto-poke on channel join",
-        "- Configurable greeting with {name} placeholder",
-        "- Plugins top-bar menu: Toggle / Status / About"
+        "- Initial release",
+        "- Plugins menu -> Open Soundboard opens slot grid",
+        "- Add unlimited slots (up to 32 -- one per pre-registered hotkey)",
+        "- Browse and assign .wav files to slots, set per-slot volume",
+        "- 32 hotkeys pre-registered (soundboard_play_1 .. soundboard_play_32)",
+        "- Bind hotkeys in TS3 Settings -> Hotkeys -> Plugins -> ZeddiHub Soundboard",
+        "- Audio mixed into mic stream via ts3plugin_onEditCapturedVoiceDataEvent",
+        "- WAV decoder (16-bit PCM mono/stereo, any sample rate via linear resample)",
+        "- Slot config persisted to %APPDATA%/TS3Client/plugins/soundboard.json"
     )
 }
 
@@ -187,22 +106,24 @@ $mitLicense = @(
 
 foreach ($p in $plugins) {
     Write-Host ""
-    Write-Host "=== Stripping $($p.repo) ===" -ForegroundColor Cyan
+    Write-Host "=== Refreshing $($p.repo) ===" -ForegroundColor Cyan
     $work = Join-Path $workRoot $p.repo
 
+    # Try clone existing repo (Soundboard repo will fail first time and we init fresh)
     git clone "https://github.com/$ghOrg/$($p.repo).git" $work 2>&1 | Out-Null
     if (-not (Test-Path "$work\.git")) {
-        Write-Host "  Clone failed, skipping" -ForegroundColor Red
-        continue
+        Write-Host "  Repo missing, initializing fresh tree" -ForegroundColor Yellow
+        New-Item -ItemType Directory -Force -Path $work | Out-Null
+        Push-Location $work
+        git init -b main 2>&1 | Out-Null
+        Pop-Location
     }
 
     # Wipe everything except .git
     Get-ChildItem $work -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-    # Write LICENSE
     $mitLicense | Out-File "$work\LICENSE" -Encoding UTF8
 
-    # Write README (English, comprehensive)
     $d = $desc[$p.clogKey]
     $readme = New-Object System.Collections.ArrayList
     [void]$readme.Add("# $($p.title)")
@@ -222,34 +143,41 @@ foreach ($p in $plugins) {
     [void]$readme.Add("")
     [void]$readme.Add("All download files are in **[Releases](https://github.com/$ghOrg/$($p.repo)/releases/latest)**.")
     [void]$readme.Add("")
-    [void]$readme.Add("### Option A: Installer (.exe) -- recommended")
+    [void]$readme.Add("### Option A: TS3 native install (.ts3_plugin) -- recommended")
     [void]$readme.Add("")
-    [void]$readme.Add("Download and run **``$($p.src)-Setup-v$($p.version).exe``**")
+    [void]$readme.Add("1. Download the .ts3_plugin file matching your TeamSpeak 3 version:")
     [void]$readme.Add("")
-    [void]$readme.Add("The wizard:")
-    [void]$readme.Add("1. Detects your TeamSpeak 3 version and selects the correct API DLL (23 / 24 / 25 / 26)")
-    [void]$readme.Add("2. Detects running TS3 and offers to close it (DLL would otherwise be locked)")
-    [void]$readme.Add("3. Installs the DLL to ``%APPDATA%\TS3Client\plugins\`` (per-user, no admin needed)")
-    [void]$readme.Add("4. Registers an uninstaller in Add/Remove Programs")
+    [void]$readme.Add("| TS3 client | API | File |")
+    [void]$readme.Add("|---|---|---|")
+    [void]$readme.Add("| 3.5.0 | 23 | ``$($p.src)-v$($p.version)-TS3-3.5.0-api23.ts3_plugin`` |")
+    [void]$readme.Add("| 3.5.1 - 3.5.5 | 24 | ``$($p.src)-v$($p.version)-TS3-3.5.1-3.5.5-api24.ts3_plugin`` |")
+    [void]$readme.Add("| **3.5.6** | **25** | **``$($p.src)-v$($p.version)-TS3-3.5.6-api25.ts3_plugin``** |")
+    [void]$readme.Add("| 3.6.x and newer | 26 | ``$($p.src)-v$($p.version)-TS3-3.6+-api26.ts3_plugin`` |")
+    [void]$readme.Add("")
+    [void]$readme.Add("2. Double-click the downloaded file. TS3 client opens an install dialog.")
+    [void]$readme.Add("3. Click **Yes** to install. TS3 copies the DLL into the plugins folder.")
+    [void]$readme.Add("4. Restart TS3 if requested. Enable the plugin in **Settings -> Plugins**.")
     [void]$readme.Add("")
     [void]$readme.Add("### Option B: Manual (.dll)")
     [void]$readme.Add("")
     [void]$readme.Add("Download the raw DLL matching your TS3 client version:")
     [void]$readme.Add("")
-    [void]$readme.Add("| TS3 client | Plugin API | File |")
-    [void]$readme.Add("|---|---|---|")
-    [void]$readme.Add("| 3.5.0 | 23 | ``$($p.dllBase)_api23_win64.dll`` |")
-    [void]$readme.Add("| 3.5.1 - 3.5.5 | 24 | ``$($p.dllBase)_api24_win64.dll`` |")
-    [void]$readme.Add("| **3.5.6** | **25** | **``$($p.dllBase)_api25_win64.dll``** |")
-    [void]$readme.Add("| 3.6.x and newer | 26 | ``$($p.dllBase)_api26_win64.dll`` |")
+    [void]$readme.Add("- ``$($p.dllBase)_api23_win64.dll`` -- TS3 3.5.0")
+    [void]$readme.Add("- ``$($p.dllBase)_api24_win64.dll`` -- TS3 3.5.1 - 3.5.5")
+    [void]$readme.Add("- ``$($p.dllBase)_api25_win64.dll`` -- TS3 3.5.6")
+    [void]$readme.Add("- ``$($p.dllBase)_api26_win64.dll`` -- TS3 3.6.x and newer")
     [void]$readme.Add("")
     [void]$readme.Add("Copy the DLL to ``%APPDATA%\TS3Client\plugins\``, then in TS3 go to **Settings -> Plugins -> Reload All -> tick Enabled**.")
     [void]$readme.Add("")
     [void]$readme.Add("If TS3 reports 'API version not compatible', you have the wrong file -- try a different API number.")
     [void]$readme.Add("")
+    [void]$readme.Add("## Theme")
+    [void]$readme.Add("")
+    [void]$readme.Add("Plugin dialogs use **TS3 client's native theme**. They look exactly like the rest of the TS3 UI -- no custom Discord-like dark theme. Whatever skin/theme you have set in TS3 will be applied.")
+    [void]$readme.Add("")
     [void]$readme.Add("## Source code")
     [void]$readme.Add("")
-    [void]$readme.Add("Source code lives in the [**collection repo**](https://github.com/$ghOrg/zeddihub-teamspeak-addons), folder ``$($p.src)/``. Build instructions and CMake configuration are there.")
+    [void]$readme.Add("Source code lives in the [collection repo](https://github.com/$ghOrg/zeddihub-teamspeak-addons), folder ``$($p.src)/``. CMake build instructions are there.")
     [void]$readme.Add("")
     [void]$readme.Add("## Changelog")
     [void]$readme.Add("")
@@ -263,12 +191,12 @@ foreach ($p in $plugins) {
     [void]$readme.Add("")
     [void]$readme.Add("## Links")
     [void]$readme.Add("")
-    [void]$readme.Add("- :house: **ZeddiHub web**: https://zeddihub.eu")
-    [void]$readme.Add("- :wrench: **ZeddiHub Tools**: https://zeddihub.eu/tools/")
-    [void]$readme.Add("- :busts_in_silhouette: **Author**: https://zeddis.xyz")
-    [void]$readme.Add("- :file_folder: **Collection**: [zeddihub-teamspeak-addons](https://github.com/$ghOrg/zeddihub-teamspeak-addons)")
+    [void]$readme.Add("- **ZeddiHub web**: https://zeddihub.eu")
+    [void]$readme.Add("- **ZeddiHub Tools**: https://zeddihub.eu/tools/")
+    [void]$readme.Add("- **Author**: https://zeddis.xyz")
+    [void]$readme.Add("- **Collection**: [zeddihub-teamspeak-addons](https://github.com/$ghOrg/zeddihub-teamspeak-addons)")
     [void]$readme.Add("")
-    [void]$readme.Add("**Sister plugins:** [Poke Bot](https://github.com/$ghOrg/zeddihub-teamspeak-pokebot) | [Follow](https://github.com/$ghOrg/zeddihub-teamspeak-follow) | [MoveSpam](https://github.com/$ghOrg/zeddihub-teamspeak-movespam) | [Voice Changer](https://github.com/$ghOrg/zeddihub-teamspeak-voicechanger) | [AutoReconnect](https://github.com/$ghOrg/zeddihub-teamspeak-autoreconnect) | [Greeting Bot](https://github.com/$ghOrg/zeddihub-teamspeak-greetingbot)")
+    [void]$readme.Add("**Sister plugins:** [Poke Bot](https://github.com/$ghOrg/zeddihub-teamspeak-pokebot) | [Follow](https://github.com/$ghOrg/zeddihub-teamspeak-follow) | [MoveSpam](https://github.com/$ghOrg/zeddihub-teamspeak-movespam) | [Soundboard](https://github.com/$ghOrg/zeddihub-teamspeak-soundboard)")
     [void]$readme.Add("")
     [void]$readme.Add("---")
     [void]$readme.Add("")
@@ -290,8 +218,16 @@ foreach ($p in $plugins) {
     # Commit + push
     Push-Location $work
     git add -A 2>&1 | Out-Null
-    git -c user.email="bot@zeddihub.eu" -c user.name="ZeddiHub Bot" commit -m "Strip to README + LICENSE + CHANGELOG only (English)" 2>&1 | Out-Null
-    git push origin main 2>&1 | Out-Null
+    git -c user.email="bot@zeddihub.eu" -c user.name="ZeddiHub Bot" commit -m "$($p.version): English README, .ts3_plugin install, native TS3 theme" 2>&1 | Out-Null
+
+    # First push for new repo
+    $existing = git remote -v 2>&1
+    if (-not ($existing -match "origin")) {
+        # New repo - create on GH
+        gh repo create "$ghOrg/$($p.repo)" --public --source=. --push --description="$($d.short)" 2>&1 | Out-Null
+    } else {
+        git push origin main 2>&1 | Out-Null
+    }
     Pop-Location
 
     Write-Host "  Pushed minimal tree" -ForegroundColor Green
