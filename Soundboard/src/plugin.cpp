@@ -49,10 +49,12 @@ char* g_pluginID = nullptr;
 std::unique_ptr<AudioEngine> g_engine;
 std::vector<SoundSlot> g_slots;
 
-// VAD bypass state — when sounds are queued we disable TS3's voice
-// activation so the mix is unconditionally transmitted. Saved value is
-// restored once playback finishes (or plugin unloads).
-std::string g_savedVad;
+// VAD threshold bypass state. When sounds queue we lower TS3's
+// "voiceactivation_level" to a very permissive value (-50 dB) so the
+// mix triggers VAD detection. Setting "vad" itself to false would put
+// TS3 into PTT mode (worse than VAD), so we keep VAD enabled and just
+// crush the threshold.
+std::string g_savedVadLevel;
 bool g_vadOverridden = false;
 uint64 g_vadSchid = 0;
 
@@ -90,41 +92,46 @@ uint64 currentSchid() {
     return ts3Functions.getCurrentServerConnectionHandlerID();
 }
 
-// Disable TS3 voice activation detection so the mic mix is transmitted
-// unconditionally. Saves current VAD state to restore later.
+// Lower VAD threshold so any audio (incl. soundboard mix) triggers
+// transmission. KEEP VAD enabled -- disabling it puts TS3 into PTT mode
+// where transmission requires a key press.
 void overrideVadOff(uint64 schid) {
     if (g_vadOverridden) return;
     if (schid == 0) return;
     if (!ts3Functions.getPreProcessorConfigValue || !ts3Functions.setPreProcessorConfigValue) return;
+
     char* cur = nullptr;
-    if (ts3Functions.getPreProcessorConfigValue(schid, "vad", &cur) == ERROR_ok && cur) {
-        g_savedVad = cur;
+    if (ts3Functions.getPreProcessorConfigValue(schid, "voiceactivation_level", &cur) == ERROR_ok && cur) {
+        g_savedVadLevel = cur;
         ts3Functions.freeMemory(cur);
     } else {
-        g_savedVad = "true";  // sane default to restore later
+        g_savedVadLevel = "-25";  // TS3 default
     }
-    ts3Functions.setPreProcessorConfigValue(schid, "vad", "false");
+    // -50 dB threshold = essentially "any signal counts as voice"
+    ts3Functions.setPreProcessorConfigValue(schid, "voiceactivation_level", "-50");
     g_vadOverridden = true;
     g_vadSchid = schid;
-    char buf[160];
+    char buf[200];
     std::snprintf(buf, sizeof(buf),
-        "[SoundBoard] VAD temporarily disabled (was '%s') to ensure transmission of mixed audio.",
-        g_savedVad.c_str());
+        "[SoundBoard] VAD threshold lowered (was '%s' dB, now '-50' dB) "
+        "to make sure soundboard mix triggers voice detection.",
+        g_savedVadLevel.c_str());
     logMsg(buf);
 }
 
 void restoreVad() {
     if (!g_vadOverridden) return;
     if (g_vadSchid != 0 && ts3Functions.setPreProcessorConfigValue) {
-        ts3Functions.setPreProcessorConfigValue(g_vadSchid, "vad", g_savedVad.c_str());
+        ts3Functions.setPreProcessorConfigValue(g_vadSchid, "voiceactivation_level",
+                                                  g_savedVadLevel.c_str());
         char buf[120];
         std::snprintf(buf, sizeof(buf),
-            "[SoundBoard] VAD restored to '%s'.", g_savedVad.c_str());
+            "[SoundBoard] VAD threshold restored to '%s' dB.", g_savedVadLevel.c_str());
         logMsg(buf);
     }
     g_vadOverridden = false;
     g_vadSchid = 0;
-    g_savedVad.clear();
+    g_savedVadLevel.clear();
 }
 
 void playSlot(int id) {
@@ -198,7 +205,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.2.2"; }
+const char* ts3plugin_version() { return "1.2.3"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
