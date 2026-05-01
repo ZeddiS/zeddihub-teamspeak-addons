@@ -101,10 +101,24 @@ void playSlot(int id) {
             logMsg(buf, LogLevel_WARNING);
             return;
         }
+
+        // 1. Queue for mic-stream mix (others in channel hear it)
         g_engine->play(s.decoded, s.volume);
+
+        // 2. Local monitor playback via TS3 native API. User hears the
+        //    sound through their default playback device too (they would
+        //    otherwise hear nothing because TS3 doesn't loop mic locally).
+        if (ts3Functions.playWaveFile && currentSchid() != 0) {
+            unsigned int err = ts3Functions.playWaveFile(currentSchid(), s.filePath.c_str());
+            if (err != ERROR_ok) {
+                std::snprintf(buf, sizeof(buf),
+                    "[SoundBoard] Local playback failed (err=%u) - others still hear it via mic mix.", err);
+                logMsg(buf, LogLevel_WARNING);
+            }
+        }
+
         std::snprintf(buf, sizeof(buf),
-            "[SoundBoard] Playing slot %d (%zu samples, ~%.1fs). "
-            "Speak briefly or use PTT for transmission.",
+            "[SoundBoard] Playing slot %d (%zu samples, ~%.1fs).",
             id, s.decoded->samples.size(),
             (double)s.decoded->samples.size() / 48000.0);
         logMsg(buf);
@@ -124,7 +138,7 @@ const char* ts3plugin_name() { return "SoundBoard"; }
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.1.0"; }
+const char* ts3plugin_version() { return "1.1.1"; }
 
 #ifdef _WIN32
 __declspec(dllexport)

@@ -15,7 +15,7 @@ $plugins = @(
     @{ src="pokebot";    repo="zeddihub-teamspeak-pokebot";    title="Poke Bot";    version="1.3.0"; clogKey="pokebot";    dllBase="zeddihub_pokebot" }
     @{ src="Follow";     repo="zeddihub-teamspeak-follow";     title="Follow";      version="1.3.0"; clogKey="follow";     dllBase="follow"           }
     @{ src="MoveSpam";   repo="zeddihub-teamspeak-movespam";   title="MoveSpam";    version="1.3.0"; clogKey="movespam";   dllBase="movespam"         }
-    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="SoundBoard";  version="1.1.0"; clogKey="soundboard"; dllBase="soundboard"       }
+    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="SoundBoard";  version="1.1.1"; clogKey="soundboard"; dllBase="soundboard"       }
 )
 
 $desc = @{
@@ -66,6 +66,11 @@ $changelogs = @{
         "- Initial release"
     )
     "soundboard" = @(
+        "## [1.1.1] - 2026-05-01",
+        "### Added",
+        "- LOCAL MONITOR via TS3 native ts3client_playWaveFile(): user hears the sound on their own playback device when they trigger a tile (was: only others heard it via mic mix)",
+        "- Required for solo testing -- before this, clicking Play in an empty channel did nothing audible to the user",
+        "",
         "## [1.1.0] - 2026-05-01",
         "### Changed",
         "- Plugin renamed: 'ZeddiHub Soundboard' -> 'SoundBoard'",
