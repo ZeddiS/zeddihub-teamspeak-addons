@@ -84,13 +84,30 @@ void playSlot(int id) {
     if (!g_engine) return;
     for (auto& s : g_slots) {
         if (s.id != id) continue;
-        if (s.filePath.empty()) return;
+        char buf[256];
+        if (s.filePath.empty()) {
+            std::snprintf(buf, sizeof(buf), "[SoundBoard] Slot %d has no file.", id);
+            logMsg(buf, LogLevel_WARNING);
+            return;
+        }
         if (!s.decoded) {
             s.decoded = g_engine->loadFile(s.filePath);
         }
-        if (s.decoded && s.decoded->ok) {
-            g_engine->play(s.decoded, s.volume);
+        if (!s.decoded || !s.decoded->ok) {
+            std::snprintf(buf, sizeof(buf),
+                "[SoundBoard] Failed to decode slot %d (file: %s). "
+                "Use 16/24/32-bit PCM or 32-bit float WAV.",
+                id, s.filePath.c_str());
+            logMsg(buf, LogLevel_WARNING);
+            return;
         }
+        g_engine->play(s.decoded, s.volume);
+        std::snprintf(buf, sizeof(buf),
+            "[SoundBoard] Playing slot %d (%zu samples, ~%.1fs). "
+            "Speak briefly or use PTT for transmission.",
+            id, s.decoded->samples.size(),
+            (double)s.decoded->samples.size() / 48000.0);
+        logMsg(buf);
         return;
     }
 }
@@ -102,12 +119,12 @@ extern "C" {
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_name() { return "ZeddiHub Soundboard"; }
+const char* ts3plugin_name() { return "SoundBoard"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char* ts3plugin_version() { return "1.0.0"; }
+const char* ts3plugin_version() { return "1.1.0"; }
 
 #ifdef _WIN32
 __declspec(dllexport)
@@ -313,11 +330,28 @@ void ts3plugin_onEditCapturedVoiceDataEvent(uint64 schid,
                                             int channels,
                                             int* edited) {
     (void)schid;
+    static int s_callbackCount = 0;
+    static bool s_loggedFirst = false;
+    if (!s_loggedFirst) {
+        s_loggedFirst = true;
+        char buf[160];
+        std::snprintf(buf, sizeof(buf),
+            "[SoundBoard] Audio callback active: sampleCount=%d, channels=%d. "
+            "Plugin is wired correctly.", sampleCount, channels);
+        logMsg(buf);
+    }
     if (!g_engine || !samples || sampleCount <= 0) return;
     if (!g_engine->hasActive()) return;
+
     bool modified = g_engine->mixIntoCapture(samples, sampleCount, channels);
     if (modified && edited) {
         *edited = 1;
+        if (++s_callbackCount % 100 == 0) {
+            char buf[80];
+            std::snprintf(buf, sizeof(buf),
+                "[SoundBoard] mixed %d frames so far.", s_callbackCount);
+            logMsg(buf);
+        }
     }
 }
 

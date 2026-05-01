@@ -7,6 +7,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QString>
+#include <QtGui/QColor>
+#include <QtWidgets/QColorDialog>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFrame>
@@ -18,7 +20,6 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QScrollArea>
-#include <QtWidgets/QSlider>
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
@@ -27,127 +28,151 @@
 
 namespace {
 
-// No custom stylesheet - inherit TS3 client's native theme via Qt parent
-// palette. Dialogs look exactly like TS3's other windows.
-
 QString configPath() {
     QString base = QDir::toNativeSeparators(QDir::homePath() + "/AppData/Roaming/TS3Client/plugins");
     QDir().mkpath(base);
     return QDir::toNativeSeparators(base + "/soundboard.json");
 }
 
+// Lighter / darker variant of a color for hover/border accents.
+QString lightenColor(const QString& hex, int delta) {
+    QColor c(hex);
+    if (!c.isValid()) c = QColor("#5865f2");
+    int r = qBound(0, c.red() + delta, 255);
+    int g = qBound(0, c.green() + delta, 255);
+    int b = qBound(0, c.blue() + delta, 255);
+    return QString("#%1%2%3")
+        .arg(r, 2, 16, QChar('0'))
+        .arg(g, 2, 16, QChar('0'))
+        .arg(b, 2, 16, QChar('0'));
+}
+
+// Pick black or white text based on background luminance.
+QString textColorFor(const QString& hex) {
+    QColor c(hex);
+    if (!c.isValid()) return "#ffffff";
+    double lum = (0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()) / 255.0;
+    return lum > 0.6 ? "#000000" : "#ffffff";
+}
+
 void rebuildGrid(QWidget* gridHost, std::vector<SoundSlot>* slotsVec, AudioEngine* engine);
 
-QWidget* makeSlotCard(SoundSlot* slotPtr, QWidget* gridHost,
-                     std::vector<SoundSlot>* slotsVec, AudioEngine* engine) {
+QPushButton* makeTile(SoundSlot* slotPtr, QWidget* gridHost,
+                       std::vector<SoundSlot>* slotsVec, AudioEngine* engine) {
     SoundSlot& slot = *slotPtr;
-    auto* card = new QFrame(gridHost);
-    card->setObjectName("slotCard");
-    card->setMinimumWidth(180);
+    auto* tile = new QPushButton(gridHost);
+    tile->setFixedSize(160, 110);
+    tile->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    auto* v = new QVBoxLayout(card);
-    v->setContentsMargins(10, 10, 10, 10);
-    v->setSpacing(6);
+    auto applyStyle = [tile](const std::string& colorHex) {
+        QString bg = QString::fromStdString(colorHex);
+        QString hover = lightenColor(bg, 20);
+        QString border = lightenColor(bg, -30);
+        QString fg = textColorFor(bg);
+        tile->setStyleSheet(QString(
+            "QPushButton {"
+            "  background-color: %1;"
+            "  color: %4;"
+            "  border: 2px solid %3;"
+            "  border-radius: 8px;"
+            "  font-size: 13px;"
+            "  font-weight: bold;"
+            "  padding: 6px;"
+            "  text-align: center;"
+            "}"
+            "QPushButton:hover { background-color: %2; }"
+            "QPushButton:pressed { background-color: %3; }"
+        ).arg(bg, hover, border, fg));
+    };
+    applyStyle(slot.color);
 
-    auto* nameLbl = new QLabel(QString::fromStdString(slot.name.empty()
-        ? "(slot " + std::to_string(slot.id) + ")"
-        : slot.name), card);
-    nameLbl->setObjectName("slotName");
-    nameLbl->setWordWrap(true);
-    v->addWidget(nameLbl);
+    auto refreshLabel = [tile, slotPtr]() {
+        QString name = slotPtr->name.empty()
+            ? QString("Slot %1").arg(slotPtr->id)
+            : QString::fromStdString(slotPtr->name);
+        QString file = slotPtr->filePath.empty()
+            ? QStringLiteral("(empty)")
+            : QFileInfo(QString::fromStdString(slotPtr->filePath)).fileName();
+        if (file.length() > 20) file = file.left(17) + "...";
+        QString hk = QString("Hotkey #%1").arg(slotPtr->id);
+        tile->setText(name + "\n" + file + "\n" + hk);
+    };
+    refreshLabel();
 
-    QString pathDisplay = slot.filePath.empty()
-        ? QStringLiteral("(no file)")
-        : QFileInfo(QString::fromStdString(slot.filePath)).fileName();
-    auto* pathLbl = new QLabel(pathDisplay, card);
-    pathLbl->setObjectName("slotPath");
-    pathLbl->setWordWrap(true);
-    v->addWidget(pathLbl);
-
-    auto* hkLbl = new QLabel(QString("Hotkey: soundboard_play_%1").arg(slot.id), card);
-    hkLbl->setObjectName("slotHotkey");
-    v->addWidget(hkLbl);
-
-    auto* volRow = new QHBoxLayout();
-    auto* volSlider = new QSlider(Qt::Horizontal, card);
-    volSlider->setRange(0, 200);
-    volSlider->setValue((int)(slot.volume * 100));
-    volRow->addWidget(new QLabel("Vol:", card));
-    volRow->addWidget(volSlider, 1);
-    v->addLayout(volRow);
-
-    QObject::connect(volSlider, &QSlider::valueChanged, [slotPtr, slotsVec](int val) {
-        slotPtr->volume = (float)val / 100.0f;
-        soundboard_dialog::saveSlots(*slotsVec);
-    });
-
-    auto* actions = new QHBoxLayout();
-    auto* playBtn = new QPushButton("Play", card);
-    playBtn->setObjectName("playBtn");
-    auto* browseBtn = new QPushButton("Browse...", card);
-    auto* menuBtn = new QToolButton(card);
-    menuBtn->setText("...");
-    menuBtn->setPopupMode(QToolButton::InstantPopup);
-    actions->addWidget(playBtn);
-    actions->addWidget(browseBtn);
-    actions->addWidget(menuBtn);
-    v->addLayout(actions);
-
-    QObject::connect(playBtn, &QPushButton::clicked, [slotPtr, engine]() {
-        if (slotPtr->filePath.empty()) return;
-        if (!slotPtr->decoded) slotPtr->decoded = engine->loadFile(slotPtr->filePath);
-        if (slotPtr->decoded && slotPtr->decoded->ok) {
-            engine->play(slotPtr->decoded, slotPtr->volume);
+    // Left click -> play
+    QObject::connect(tile, &QPushButton::clicked, [slotPtr, engine, tile]() {
+        if (slotPtr->filePath.empty()) {
+            tile->setToolTip("Right-click -> Browse to select a sound file.");
+            return;
         }
+        if (!slotPtr->decoded) {
+            slotPtr->decoded = engine->loadFile(slotPtr->filePath);
+        }
+        if (!slotPtr->decoded || !slotPtr->decoded->ok) {
+            tile->setToolTip("Failed to decode file. Use 16/24/32-bit PCM or 32-bit float WAV.");
+            return;
+        }
+        engine->play(slotPtr->decoded, slotPtr->volume);
+        tile->setToolTip(QString("Playing... (loaded %1 samples)").arg(slotPtr->decoded->samples.size()));
     });
 
-    QObject::connect(browseBtn, &QPushButton::clicked, [card, slotPtr, slotsVec, pathLbl]() {
-        QString file = QFileDialog::getOpenFileName(
-            card, "Select sound file", QString(),
-            "Audio (*.wav);;All (*.*)");
-        if (file.isEmpty()) return;
-        slotPtr->filePath = file.toStdString();
-        slotPtr->decoded.reset();
-        soundboard_dialog::saveSlots(*slotsVec);
-        pathLbl->setText(QFileInfo(file).fileName());
-    });
+    // Right-click context menu
+    QObject::connect(tile, &QWidget::customContextMenuRequested,
+        [slotPtr, slotsVec, engine, gridHost, tile, refreshLabel, applyStyle](const QPoint&) {
+            QMenu menu(tile);
+            QAction* aPlay   = menu.addAction("Play");
+            QAction* aBrowse = menu.addAction("Browse sound file...");
+            QAction* aRename = menu.addAction("Rename...");
+            QAction* aColor  = menu.addAction("Change color...");
+            menu.addSeparator();
+            QAction* aClear  = menu.addAction("Clear sound");
+            QAction* aDelete = menu.addAction("Delete tile");
+            QAction* picked = menu.exec(QCursor::pos());
 
-    auto* menu = new QMenu(menuBtn);
-    auto* renameAct = menu->addAction("Rename...");
-    auto* clearAct = menu->addAction("Clear sound");
-    menu->addSeparator();
-    auto* deleteAct = menu->addAction("Delete slot");
-    menuBtn->setMenu(menu);
-
-    QObject::connect(renameAct, &QAction::triggered, [card, slotPtr, nameLbl, slotsVec]() {
-        bool ok = false;
-        QString name = QInputDialog::getText(card, "Rename slot", "New name:",
-                                             QLineEdit::Normal,
-                                             QString::fromStdString(slotPtr->name), &ok);
-        if (!ok) return;
-        slotPtr->name = name.toStdString();
-        nameLbl->setText(name.isEmpty()
-            ? QString("(slot %1)").arg(slotPtr->id) : name);
-        soundboard_dialog::saveSlots(*slotsVec);
-    });
-    QObject::connect(clearAct, &QAction::triggered, [slotPtr, pathLbl, slotsVec]() {
-        slotPtr->filePath.clear();
-        slotPtr->decoded.reset();
-        pathLbl->setText("(no file)");
-        soundboard_dialog::saveSlots(*slotsVec);
-    });
-    QObject::connect(deleteAct, &QAction::triggered, [slotPtr, gridHost, slotsVec, engine]() {
-        for (auto it = slotsVec->begin(); it != slotsVec->end(); ++it) {
-            if (it->id == slotPtr->id) {
-                slotsVec->erase(it);
-                break;
+            if (picked == aPlay) {
+                if (slotPtr->filePath.empty()) return;
+                if (!slotPtr->decoded) slotPtr->decoded = engine->loadFile(slotPtr->filePath);
+                if (slotPtr->decoded && slotPtr->decoded->ok) engine->play(slotPtr->decoded, slotPtr->volume);
+            } else if (picked == aBrowse) {
+                QString file = QFileDialog::getOpenFileName(
+                    tile, "Select sound file", QString(),
+                    "WAV files (*.wav);;All files (*.*)");
+                if (file.isEmpty()) return;
+                slotPtr->filePath = file.toStdString();
+                slotPtr->decoded.reset();
+                soundboard_dialog::saveSlots(*slotsVec);
+                refreshLabel();
+            } else if (picked == aRename) {
+                bool ok = false;
+                QString name = QInputDialog::getText(tile, "Rename tile", "Tile name:",
+                                                     QLineEdit::Normal,
+                                                     QString::fromStdString(slotPtr->name), &ok);
+                if (!ok) return;
+                slotPtr->name = name.toStdString();
+                soundboard_dialog::saveSlots(*slotsVec);
+                refreshLabel();
+            } else if (picked == aColor) {
+                QColor initial(QString::fromStdString(slotPtr->color));
+                QColor c = QColorDialog::getColor(initial, tile, "Pick tile color");
+                if (!c.isValid()) return;
+                slotPtr->color = c.name().toStdString();
+                applyStyle(slotPtr->color);
+                soundboard_dialog::saveSlots(*slotsVec);
+            } else if (picked == aClear) {
+                slotPtr->filePath.clear();
+                slotPtr->decoded.reset();
+                soundboard_dialog::saveSlots(*slotsVec);
+                refreshLabel();
+            } else if (picked == aDelete) {
+                for (auto it = slotsVec->begin(); it != slotsVec->end(); ++it) {
+                    if (it->id == slotPtr->id) { slotsVec->erase(it); break; }
+                }
+                soundboard_dialog::saveSlots(*slotsVec);
+                rebuildGrid(gridHost, slotsVec, engine);
             }
-        }
-        soundboard_dialog::saveSlots(*slotsVec);
-        rebuildGrid(gridHost, slotsVec, engine);
-    });
+        });
 
-    return card;
+    return tile;
 }
 
 void rebuildGrid(QWidget* gridHost, std::vector<SoundSlot>* slotsVec, AudioEngine* engine) {
@@ -161,14 +186,27 @@ void rebuildGrid(QWidget* gridHost, std::vector<SoundSlot>* slotsVec, AudioEngin
     }
     auto* grid = new QGridLayout(gridHost);
     grid->setSpacing(8);
-    constexpr int kCols = 4;
+    grid->setContentsMargins(4, 4, 4, 4);
+    constexpr int kCols = 5;
     int row = 0, col = 0;
     for (auto& slot : *slotsVec) {
-        grid->addWidget(makeSlotCard(&slot, gridHost, slotsVec, engine), row, col);
+        grid->addWidget(makeTile(&slot, gridHost, slotsVec, engine), row, col);
         col++;
         if (col >= kCols) { col = 0; row++; }
     }
+    grid->setRowStretch(row + 1, 1);
 }
+
+const char* kDefaultColors[] = {
+    "#5865f2",  // blurple
+    "#22a155",  // green
+    "#e04a2a",  // red-orange
+    "#f0b132",  // yellow
+    "#9333ea",  // purple
+    "#0ea5e9",  // cyan
+    "#ec4899",  // pink
+    "#64748b",  // slate
+};
 
 }  // namespace
 
@@ -181,6 +219,7 @@ void loadSlots(std::vector<SoundSlot>& slotsOut) {
         for (int i = 1; i <= 8; ++i) {
             SoundSlot s;
             s.id = i;
+            s.color = kDefaultColors[(i - 1) % 8];
             slotsOut.push_back(s);
         }
         return;
@@ -194,12 +233,14 @@ void loadSlots(std::vector<SoundSlot>& slotsOut) {
         s.name = o.value("name").toString().toStdString();
         s.filePath = o.value("path").toString().toStdString();
         s.volume = (float)o.value("volume").toDouble(1.0);
+        s.color = o.value("color").toString("#5865f2").toStdString();
         slotsOut.push_back(s);
     }
     if (slotsOut.empty()) {
         for (int i = 1; i <= 8; ++i) {
             SoundSlot s;
             s.id = i;
+            s.color = kDefaultColors[(i - 1) % 8];
             slotsOut.push_back(s);
         }
     }
@@ -213,6 +254,7 @@ void saveSlots(const std::vector<SoundSlot>& slotsIn) {
         o["name"] = QString::fromStdString(s.name);
         o["path"] = QString::fromStdString(s.filePath);
         o["volume"] = (double)s.volume;
+        o["color"] = QString::fromStdString(s.color);
         arr.append(o);
     }
     QJsonObject root;
@@ -226,30 +268,28 @@ void saveSlots(const std::vector<SoundSlot>& slotsIn) {
 
 void open(std::vector<SoundSlot>& slotsIn, AudioEngine& engine) {
     QDialog dlg;
-    dlg.setWindowTitle(QStringLiteral("ZeddiHub Soundboard"));
-    dlg.setMinimumSize(820, 520);
+    dlg.setWindowTitle(QStringLiteral("SoundBoard"));
+    dlg.setMinimumSize(900, 560);
 
     auto* root = new QVBoxLayout(&dlg);
     root->setContentsMargins(12, 12, 12, 12);
 
     auto* tb = new QHBoxLayout();
-    auto* addBtn = new QPushButton("+ Add Slot", &dlg);
-    addBtn->setObjectName("addSlotBtn");
+    auto* addBtn = new QPushButton("+ Add Tile", &dlg);
     auto* stopBtn = new QPushButton("Stop All", &dlg);
-    stopBtn->setObjectName("stopAllBtn");
     tb->addWidget(addBtn);
     tb->addWidget(stopBtn);
     tb->addStretch();
     auto* hint = new QLabel(QStringLiteral(
-        "Bind hotkeys in TS3 Settings -> Hotkeys -> Plugins -> ZeddiHub Soundboard"), &dlg);
-    hint->setStyleSheet(QStringLiteral("color: #a3a6aa; font-size: 11px;"));
+        "Left-click a tile to play. Right-click for options. "
+        "Bind hotkeys in TS3 Settings -> Hotkeys."), &dlg);
     tb->addWidget(hint);
     root->addLayout(tb);
 
     auto* scroll = new QScrollArea(&dlg);
     scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     auto* viewport = new QWidget();
-    viewport->setObjectName("viewport");
     scroll->setWidget(viewport);
     root->addWidget(scroll, 1);
 
@@ -259,8 +299,8 @@ void open(std::vector<SoundSlot>& slotsIn, AudioEngine& engine) {
 
     QObject::connect(addBtn, &QPushButton::clicked, [&dlg, viewport, slotsVecPtr, enginePtr]() {
         if (slotsVecPtr->size() >= 32) {
-            QMessageBox::information(&dlg, "Soundboard",
-                "Maximum of 32 slots reached (limited by pre-registered hotkeys).");
+            QMessageBox::information(&dlg, "SoundBoard",
+                "Maximum of 32 tiles reached (one per pre-registered hotkey).");
             return;
         }
         int nextId = 1;
@@ -271,6 +311,7 @@ void open(std::vector<SoundSlot>& slotsIn, AudioEngine& engine) {
         }
         SoundSlot s;
         s.id = nextId;
+        s.color = kDefaultColors[(nextId - 1) % 8];
         slotsVecPtr->push_back(s);
         soundboard_dialog::saveSlots(*slotsVecPtr);
         rebuildGrid(viewport, slotsVecPtr, enginePtr);

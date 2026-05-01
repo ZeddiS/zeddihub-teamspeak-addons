@@ -90,17 +90,23 @@ std::shared_ptr<DecodedSound> AudioEngine::decodeWav(const std::string& path) {
         }
     }
 
-    if (audioFormat != 1 /* PCM */ ||
-        numChannels < 1 || numChannels > 2 ||
-        sampleRate == 0 ||
-        (bitsPerSample != 16 && bitsPerSample != 8) ||
-        dataBytes.empty()) {
-        return out;
-    }
+    // Supported formats:
+    // - PCM (1): 8-bit unsigned, 16-bit signed, 24-bit signed, 32-bit signed
+    // - IEEE float (3): 32-bit float
+    bool isPcm = (audioFormat == 1);
+    bool isFloat = (audioFormat == 3);
+    bool ok = (isPcm || isFloat) &&
+              numChannels >= 1 && numChannels <= 8 &&
+              sampleRate > 0 &&
+              !dataBytes.empty();
+    if (isPcm && bitsPerSample != 8 && bitsPerSample != 16 &&
+        bitsPerSample != 24 && bitsPerSample != 32) ok = false;
+    if (isFloat && bitsPerSample != 32) ok = false;
+    if (!ok) return out;
 
-    // Convert raw bytes to float [-1, 1] interleaved
+    // Decode samples to float [-1, 1] interleaved
     std::vector<float> floatData;
-    if (bitsPerSample == 16) {
+    if (isPcm && bitsPerSample == 16) {
         const int n = (int)(dataBytes.size() / 2);
         floatData.resize(n);
         for (int i = 0; i < n; ++i) {
@@ -108,11 +114,36 @@ std::shared_ptr<DecodedSound> AudioEngine::decodeWav(const std::string& path) {
                                   ((uint16_t)dataBytes[i * 2 + 1] << 8));
             floatData[i] = (float)s / 32768.0f;
         }
-    } else {  // 8-bit unsigned PCM
+    } else if (isPcm && bitsPerSample == 8) {
         floatData.resize(dataBytes.size());
         for (std::size_t i = 0; i < dataBytes.size(); ++i) {
             floatData[i] = ((float)dataBytes[i] - 128.0f) / 128.0f;
         }
+    } else if (isPcm && bitsPerSample == 24) {
+        const int n = (int)(dataBytes.size() / 3);
+        floatData.resize(n);
+        for (int i = 0; i < n; ++i) {
+            int32_t s = (int32_t)dataBytes[i * 3] |
+                        ((int32_t)dataBytes[i * 3 + 1] << 8) |
+                        ((int32_t)dataBytes[i * 3 + 2] << 16);
+            // sign-extend 24-bit
+            if (s & 0x800000) s |= 0xFF000000;
+            floatData[i] = (float)s / 8388608.0f;
+        }
+    } else if (isPcm && bitsPerSample == 32) {
+        const int n = (int)(dataBytes.size() / 4);
+        floatData.resize(n);
+        for (int i = 0; i < n; ++i) {
+            int32_t s = (int32_t)((uint32_t)dataBytes[i * 4] |
+                                  ((uint32_t)dataBytes[i * 4 + 1] << 8) |
+                                  ((uint32_t)dataBytes[i * 4 + 2] << 16) |
+                                  ((uint32_t)dataBytes[i * 4 + 3] << 24));
+            floatData[i] = (float)s / 2147483648.0f;
+        }
+    } else if (isFloat && bitsPerSample == 32) {
+        const int n = (int)(dataBytes.size() / 4);
+        floatData.resize(n);
+        std::memcpy(floatData.data(), dataBytes.data(), n * 4);
     }
 
     out->samples = resampleToMono48k(floatData, (int)sampleRate, (int)numChannels);
@@ -201,22 +232,29 @@ bool AudioEngine::mixIntoCapture(short* samples, int sampleCount, int channels) 
     std::lock_guard<std::mutex> lk(mu_);
     if (active_.empty()) return false;
 
-    const int total = sampleCount * channels;
     const float master = masterVolume_.load();
 
-    for (int i = 0; i < total; ++i) {
-        int mixed = samples[i];
-
+    // Iterate per FRAME (not per sample). For each frame:
+    //   1. Sum mono soundboard samples from all active sessions
+    //   2. Broadcast that mono mix to all output channels (mono+sound,
+    //      stereo: same sound on L+R, etc.)
+    // Position advances once per frame regardless of channels.
+    for (int frame = 0; frame < sampleCount; ++frame) {
+        int monoMix = 0;
         for (auto& s : active_) {
             if (s.position >= s.buffer->samples.size()) continue;
             short sb = s.buffer->samples[s.position];
-            mixed += (int)((float)sb * s.volume * master);
+            monoMix += (int)((float)sb * s.volume * master);
             s.position++;
         }
 
-        if (mixed > 32767) mixed = 32767;
-        else if (mixed < -32768) mixed = -32768;
-        samples[i] = (short)mixed;
+        for (int ch = 0; ch < channels; ++ch) {
+            const int idx = frame * channels + ch;
+            int mixed = (int)samples[idx] + monoMix;
+            if (mixed > 32767) mixed = 32767;
+            else if (mixed < -32768) mixed = -32768;
+            samples[idx] = (short)mixed;
+        }
     }
 
     // Drop finished sessions

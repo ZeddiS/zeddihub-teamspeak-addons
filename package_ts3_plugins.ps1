@@ -21,8 +21,8 @@ $plugins = @(
        desc="Auto-follow another TeamSpeak 3 client into channels." }
     @{ src="MoveSpam";   title="MoveSpam";    version="1.3.0"; dllBase="movespam"; iconBase="movespam";
        desc="Repeatedly move a TeamSpeak 3 client between two channels." }
-    @{ src="Soundboard"; title="Soundboard";  version="1.0.0"; dllBase="soundboard"; iconBase="soundboard";
-       desc="Play sound files into your microphone stream with hotkeys." }
+    @{ src="Soundboard"; title="SoundBoard";  version="1.1.0"; dllBase="soundboard"; iconBase="soundboard";
+       desc="Colored tile soundboard. Click tiles to play .wav into your mic stream. Custom names + colors per tile, hotkey support." }
     @{ src="VoiceChanger"; title="Voice Changer"; version="1.2.5"; dllBase="voicechanger"; iconBase="voicechanger";
        desc="Real-time DSP voice effects for outgoing microphone." }
 )

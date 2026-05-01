@@ -15,7 +15,7 @@ $plugins = @(
     @{ src="pokebot";    repo="zeddihub-teamspeak-pokebot";    title="Poke Bot";    version="1.3.0"; clogKey="pokebot";    dllBase="zeddihub_pokebot" }
     @{ src="Follow";     repo="zeddihub-teamspeak-follow";     title="Follow";      version="1.3.0"; clogKey="follow";     dllBase="follow"           }
     @{ src="MoveSpam";   repo="zeddihub-teamspeak-movespam";   title="MoveSpam";    version="1.3.0"; clogKey="movespam";   dllBase="movespam"         }
-    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="Soundboard";  version="1.0.0"; clogKey="soundboard"; dllBase="soundboard"       }
+    @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; title="SoundBoard";  version="1.1.0"; clogKey="soundboard"; dllBase="soundboard"       }
 )
 
 $desc = @{
@@ -25,8 +25,8 @@ $desc = @{
                   long="A polling worker checks the target's current channel every 1 second and moves you to match. The plugin NEVER auto-stops on errors -- only manual STOP or target unreachable for 10 seconds ends the follow." }
     "movespam" = @{ short="Repeatedly move a TeamSpeak 3 client between two channels.";
                     long="Basic mode alternates the target between their current channel and the server's default channel. Custom mode opens a dialog where you specify a destination channel (by name or ID), interval, and max move count." }
-    "soundboard" = @{ short="Play sound files into your TeamSpeak 3 microphone stream with hotkeys.";
-                      long="Open the soundboard window from Plugins menu, add slots, browse for .wav files. Each slot has a configurable hotkey (bind in TS3 Settings -> Hotkeys). When triggered, the sound is mixed into your outgoing voice stream so others hear it. Multiple sounds can play simultaneously." }
+    "soundboard" = @{ short="Colored tile soundboard for TeamSpeak 3. Click tiles to play .wav into your mic stream.";
+                      long="Open SoundBoard from Plugins menu. Add tiles, browse for .wav files, customize each tile's name and color. Right-click a tile for options. Each tile has a hotkey (bind in TS3 Settings -> Hotkeys). When triggered, sound is mixed into your outgoing mic stream so others in the channel hear it. Supports 16/24/32-bit PCM and 32-bit float WAV. Multiple sounds mix simultaneously." }
 }
 
 $changelogs = @{
@@ -66,6 +66,16 @@ $changelogs = @{
         "- Initial release"
     )
     "soundboard" = @(
+        "## [1.1.0] - 2026-05-01",
+        "### Changed",
+        "- Plugin renamed: 'ZeddiHub Soundboard' -> 'SoundBoard'",
+        "- Dialog UI redesigned as colored tile grid (click to play, right-click for options)",
+        "- Each tile now has a CUSTOMIZABLE COLOR (right-click -> Change color, opens QColorDialog)",
+        "- Diagnostic log entries added (TS3 Tools -> Client log shows when sounds are queued + when audio callback fires)",
+        "### Fixed",
+        "- WAV decoder now supports 24-bit PCM, 32-bit PCM, 32-bit float (was only 16/8-bit)",
+        "- Mix function fixed for stereo capture (was advancing position 2x too fast on stereo mics)",
+        "",
         "## [1.0.0] - 2026-05-01",
         "### Added",
         "- Initial release",
@@ -73,10 +83,7 @@ $changelogs = @{
         "- Add unlimited slots (up to 32 -- one per pre-registered hotkey)",
         "- Browse and assign .wav files to slots, set per-slot volume",
         "- 32 hotkeys pre-registered (soundboard_play_1 .. soundboard_play_32)",
-        "- Bind hotkeys in TS3 Settings -> Hotkeys -> Plugins -> ZeddiHub Soundboard",
-        "- Audio mixed into mic stream via ts3plugin_onEditCapturedVoiceDataEvent",
-        "- WAV decoder (16-bit PCM mono/stereo, any sample rate via linear resample)",
-        "- Slot config persisted to %APPDATA%/TS3Client/plugins/soundboard.json"
+        "- Audio mixed into mic stream via ts3plugin_onEditCapturedVoiceDataEvent"
     )
 }
 
