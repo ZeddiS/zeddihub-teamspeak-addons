@@ -9,10 +9,13 @@ $root      = $PSScriptRoot
 if (-not $root) { $root = "C:\Users\12voj\Documents\zeddihub-teamspeak-addons" }
 
 $plugins = @(
-    @{ dir = "pokebot";    var = "POKEBOT_API_VERSION";    base = "zeddihub_pokebot" }
-    @{ dir = "Follow";     var = "FOLLOW_API_VERSION";     base = "follow"           }
-    @{ dir = "MoveSpam";   var = "MOVESPAM_API_VERSION";   base = "movespam"         }
-    @{ dir = "Soundboard"; var = "SOUNDBOARD_API_VERSION"; base = "soundboard"       }
+    @{ dir = "pokebot";      var = "POKEBOT_API_VERSION";    base = "zeddihub_pokebot" }
+    @{ dir = "Follow";       var = "FOLLOW_API_VERSION";     base = "follow"           }
+    @{ dir = "MoveSpam";     var = "MOVESPAM_API_VERSION";   base = "movespam"         }
+    @{ dir = "Soundboard";   var = "SOUNDBOARD_API_VERSION"; base = "soundboard"       }
+    # VoiceChanger lives in its own repo (not part of curated collection)
+    # but source is here for builds. Only build if folder exists.
+    @{ dir = "VoiceChanger"; var = "VC_API_VERSION";         base = "voicechanger"     }
 )
 $apis = @(23, 24, 25, 26)
 

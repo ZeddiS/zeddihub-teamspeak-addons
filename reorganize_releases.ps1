@@ -14,6 +14,7 @@ $plugins = @(
     @{ src="Follow";     repo="zeddihub-teamspeak-follow";     version="1.3.0"; dllBase="follow"           }
     @{ src="MoveSpam";   repo="zeddihub-teamspeak-movespam";   version="1.3.0"; dllBase="movespam"         }
     @{ src="Soundboard"; repo="zeddihub-teamspeak-soundboard"; version="1.0.0"; dllBase="soundboard"       }
+    @{ src="VoiceChanger"; repo="zeddihub-teamspeak-voicechanger"; version="1.2.5"; dllBase="voicechanger" }
 )
 
 function Ts3Label($api) {

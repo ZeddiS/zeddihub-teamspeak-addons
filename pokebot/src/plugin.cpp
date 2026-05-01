@@ -251,7 +251,7 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
     (*menuItems)[idx] = nullptr;
 
     *menuIcon = static_cast<char*>(std::malloc(PLUGIN_MENU_BUFSZ));
-    _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "");
+    _strcpy(*menuIcon, PLUGIN_MENU_BUFSZ, "icon.png");
 }
 
 #ifdef _WIN32

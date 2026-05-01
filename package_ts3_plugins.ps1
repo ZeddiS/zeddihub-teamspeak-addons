@@ -15,15 +15,18 @@ if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $plugins = @(
-    @{ src="pokebot";    title="Poke Bot";    version="1.3.0"; dllBase="zeddihub_pokebot";
+    @{ src="pokebot";    title="Poke Bot";    version="1.3.0"; dllBase="zeddihub_pokebot"; iconBase="pokebot";
        desc="Right-click any TeamSpeak 3 client to launch a poke campaign." }
-    @{ src="Follow";     title="Follow";      version="1.3.0"; dllBase="follow";
+    @{ src="Follow";     title="Follow";      version="1.3.0"; dllBase="follow"; iconBase="follow";
        desc="Auto-follow another TeamSpeak 3 client into channels." }
-    @{ src="MoveSpam";   title="MoveSpam";    version="1.3.0"; dllBase="movespam";
+    @{ src="MoveSpam";   title="MoveSpam";    version="1.3.0"; dllBase="movespam"; iconBase="movespam";
        desc="Repeatedly move a TeamSpeak 3 client between two channels." }
-    @{ src="Soundboard"; title="Soundboard";  version="1.0.0"; dllBase="soundboard";
+    @{ src="Soundboard"; title="Soundboard";  version="1.0.0"; dllBase="soundboard"; iconBase="soundboard";
        desc="Play sound files into your microphone stream with hotkeys." }
+    @{ src="VoiceChanger"; title="Voice Changer"; version="1.2.5"; dllBase="voicechanger"; iconBase="voicechanger";
+       desc="Real-time DSP voice effects for outgoing microphone." }
 )
+$iconsDir = Join-Path $root "icons"
 
 function Ts3Label($api) {
     switch ($api) {
@@ -60,6 +63,16 @@ foreach ($p in $plugins) {
 
         # Copy DLL into plugins/
         Copy-Item $dll "$stage\plugins\" -Force
+
+        # Bundle icon into plugins/<dll_name>/icon.png so TS3 can find it
+        # via menuIcon = "icon.png" (relative to plugin's icon directory).
+        $dllBaseNoExt = "$($p.dllBase)_api${api}_win64"
+        $iconDestDir = "$stage\plugins\$dllBaseNoExt"
+        New-Item -ItemType Directory -Force -Path $iconDestDir | Out-Null
+        $iconSrc = Join-Path $iconsDir "$($p.iconBase).png"
+        if (Test-Path $iconSrc) {
+            Copy-Item $iconSrc "$iconDestDir\icon.png" -Force
+        }
 
         # Zip and rename to .ts3_plugin
         $label = Ts3Label $api
