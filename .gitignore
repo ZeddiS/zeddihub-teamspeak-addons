@@ -40,6 +40,10 @@ installer/output/
 installer/build_*/
 *.exe
 
+# TS3 native plugin packages
+ts3_plugins/
+*.ts3_plugin
+
 # Logs
 *.log
 aqtinstall.log
